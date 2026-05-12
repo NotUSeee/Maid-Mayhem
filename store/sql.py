@@ -116,6 +116,31 @@ def owns_card(ctx: Context, user_id: str, card_type: str, card_id: str) -> bool:
     return bool(n and int(n) > 0)
 
 
+def consume_card(ctx: Context, user_id: str, card_type: str, card_id: str, qty: int) -> None:
+    """Decrement ``count`` by ``qty``. Deletes the row if count hits zero.
+
+    Used by fusion; assumes the caller already verified the user owns at
+    least ``qty`` of this card.
+    """
+    if qty <= 0:
+        return
+    ctx.sql.execute(
+        """
+        UPDATE mm_inventory
+        SET count = count - %s
+        WHERE user_id = %s AND card_type = %s AND card_id = %s
+        """,
+        [int(qty), user_id, card_type, card_id],
+    )
+    ctx.sql.execute(
+        """
+        DELETE FROM mm_inventory
+        WHERE user_id = %s AND card_type = %s AND card_id = %s AND count <= 0
+        """,
+        [user_id, card_type, card_id],
+    )
+
+
 # ── Player stats + battle log ───────────────────────────────────────────────
 
 def record_battle(

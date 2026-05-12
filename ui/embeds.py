@@ -138,6 +138,76 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
     }
 
 
+def fusion_menu_embed(totals_by_rarity: dict[str, int]) -> dict[str, Any]:
+    """Show every fusable tier, with current owned count and recipe cost."""
+    from data import fusion as fusion_data
+    lines = []
+    for rcp in fusion_data.RECIPES:
+        from_r = rarities_data.BY_ID.get(rcp.from_rarity)
+        to_r   = rarities_data.BY_ID.get(rcp.to_rarity)
+        have = int(totals_by_rarity.get(rcp.from_rarity, 0))
+        ok = "✅" if have >= rcp.cost else "❌"
+        from_tag = f"{from_r.emoji} {from_r.label}" if from_r else rcp.from_rarity
+        to_tag   = f"{to_r.emoji} {to_r.label}"   if to_r   else rcp.to_rarity
+        lines.append(
+            f"{ok} **{rcp.cost}× {from_tag}** → 1× {to_tag}  ·  you have **{have}**"
+        )
+    return {
+        "title": "\U0001F501 Card Fusion",
+        "description": "Pick a tier from the menu to combine duplicates.\n\n" + "\n".join(lines),
+        "color": 0x6366F1,
+        "footer": {"text": "Highest-count copies are consumed first."},
+    }
+
+
+def fusion_confirm_embed(
+    from_rarity: str, to_rarity: str, cost: int,
+    plan: list[tuple[str, str, int]],
+) -> dict[str, Any]:
+    from_r = rarities_data.BY_ID.get(from_rarity)
+    to_r   = rarities_data.BY_ID.get(to_rarity)
+    plan_lines = []
+    for card_type, card_id, qty in plan:
+        if card_type == "maid":
+            m = maids_data.BY_ID.get(card_id)
+            name = m.name if m else card_id
+        else:
+            t = tools_data.BY_ID.get(card_id)
+            name = t.name if t else card_id
+        plan_lines.append(f"  • **{name}** × {qty}")
+    return {
+        "title": f"\U0001F501 Fuse {cost}× {from_r.label if from_r else from_rarity} → 1× {to_r.label if to_r else to_rarity}?",
+        "description": "These cards will be consumed:\n" + "\n".join(plan_lines),
+        "color": 0xA855F7,
+        "footer": {"text": "Confirm to fuse, or cancel."},
+    }
+
+
+def fusion_result_embed(
+    consumed: list[tuple[str, str, int]],
+    result_type: str, result_id: str,
+) -> dict[str, Any]:
+    if result_type == "maid":
+        m = maids_data.BY_ID.get(result_id)
+        name = m.name if m else result_id
+        rarity = m.rarity if m else ""
+        kind_tag = "\U0001F9E0 Maid"
+    else:
+        t = tools_data.BY_ID.get(result_id)
+        name = t.name if t else result_id
+        rarity = t.rarity if t else ""
+        kind_tag = "\U0001F527 Tool"
+    r = rarities_data.BY_ID.get(rarity)
+    color = r.color if r else 0x6366F1
+    rtag = f"{r.emoji} **{r.label}**" if r else rarity
+    return {
+        "title": "✨ Fusion complete",
+        "description": f"You crafted: {rtag} · {kind_tag} **{name}**",
+        "color": color,
+        "footer": {"text": "Find it in /maid cards."},
+    }
+
+
 def pack_shop_embed(coins: int) -> dict[str, Any]:
     """List shop packs with prices, contents, and current coin balance."""
     fields = []
