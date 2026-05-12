@@ -10,6 +10,7 @@ from typing import Any
 from data import chaos as chaos_data
 from data import elements as elements_data
 from data import maids as maids_data
+from data import packs as packs_data
 from data import rarities as rarities_data
 from data import tools as tools_data
 
@@ -91,9 +92,8 @@ def tool_card_embed(tool_id: str, *, owned_count: int | None = None) -> dict[str
 
 # ── Daily pack reveal ───────────────────────────────────────────────────────
 
-def daily_pack_embed(drops: list[tuple[str, str]]) -> dict[str, Any]:
-    """drops: list of (card_type, card_id) pairs."""
-    lines = []
+def _pack_lines(drops: list[tuple[str, str]]) -> list[str]:
+    lines: list[str] = []
     for card_type, card_id in drops:
         if card_type == "maid":
             m = maids_data.BY_ID.get(card_id)
@@ -111,11 +111,50 @@ def daily_pack_embed(drops: list[tuple[str, str]]) -> dict[str, Any]:
             r = rarities_data.BY_ID.get(t.rarity)
             tag = f"{r.emoji} **{r.label}**" if r else ""
             lines.append(f"{tag} · \U0001F527 **{t.name}**")
+    return lines
+
+
+def daily_pack_embed(drops: list[tuple[str, str]]) -> dict[str, Any]:
+    """drops: list of (card_type, card_id) pairs."""
+    lines = _pack_lines(drops)
     return {
         "title": "\U0001F381 Daily Dust Pack",
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
         "footer": {"text": "Come back tomorrow for another pack."},
+    }
+
+
+def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left: int) -> dict[str, Any]:
+    """Result of a shop purchase. Includes remaining coin balance."""
+    pack = packs_data.BY_ID.get(pack_id)
+    title = f"{pack.emoji} {pack.name}" if pack else "Pack"
+    lines = _pack_lines(drops)
+    return {
+        "title": title,
+        "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
+        "color": 0xCA8A04,
+        "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
+    }
+
+
+def pack_shop_embed(coins: int) -> dict[str, Any]:
+    """List shop packs with prices, contents, and current coin balance."""
+    fields = []
+    for p in packs_data.ALL:
+        affordable = coins >= p.price
+        price_tag = f"\U0001FA99 {p.price}" + ("" if affordable else "  _(need more coins)_")
+        fields.append({
+            "name": f"{p.emoji} {p.name} — {price_tag}",
+            "value": f"{p.description}\n_{p.flavor}_" if p.flavor else p.description,
+            "inline": False,
+        })
+    return {
+        "title": "\U0001F3EA Maid Manor Shop",
+        "description": f"You have **\U0001FA99 {coins}** coins.",
+        "color": 0xCA8A04,
+        "fields": fields,
+        "footer": {"text": "Earn coins by winning battles or claiming /maid daily."},
     }
 
 

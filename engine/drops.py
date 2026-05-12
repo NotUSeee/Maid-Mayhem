@@ -62,3 +62,55 @@ def roll_card(rng: Optional[random.Random] = None) -> tuple[str, str]:
 def roll_pack(n: int = 3, rng: Optional[random.Random] = None) -> list[tuple[str, str]]:
     """Roll a pack of `n` cards."""
     return [roll_card(rng) for _ in range(n)]
+
+
+def roll_rarity_with_floor(
+    floor: str,
+    rng: Optional[random.Random] = None,
+) -> str:
+    """Roll a rarity id, restricted to tiers at or above ``floor``.
+
+    The weight of sub-floor tiers is redistributed proportionally across
+    the eligible tiers, not dumped into the floor — so a Royal Service
+    Pack (floor=rare) gives a meaningfully bumped chance of Epic /
+    Legendary / Mythic, not 90%+ Rare.
+    """
+    r = rng or random
+    order = [rarity.id for rarity in rarities_data.ALL]
+    try:
+        floor_idx = order.index(floor)
+    except ValueError:
+        floor_idx = 0
+    eligible = rarities_data.ALL[floor_idx:]
+    total = sum(rarity.weight for rarity in eligible)
+    if total <= 0:
+        return eligible[0].id
+    pick = r.uniform(0.0, total)
+    cum = 0.0
+    for rarity in eligible:
+        cum += rarity.weight
+        if pick <= cum:
+            return rarity.id
+    return eligible[-1].id
+
+
+def roll_card_with_floor(
+    floor: str,
+    rng: Optional[random.Random] = None,
+) -> tuple[str, str]:
+    """Roll one card, never below ``floor`` rarity."""
+    r = rng or random
+    rarity = roll_rarity_with_floor(floor, r)
+    card_type = "maid" if r.random() < 0.7 else "tool"
+    rarity = _nearest_rarity_with_pool(card_type, rarity)
+    pool = (maids_data.BY_RARITY if card_type == "maid" else tools_data.BY_RARITY)[rarity]
+    return card_type, r.choice(pool).id
+
+
+def roll_pack_with_floor(
+    n: int,
+    floor: str,
+    rng: Optional[random.Random] = None,
+) -> list[tuple[str, str]]:
+    """Roll ``n`` cards with a rarity floor (shop packs)."""
+    return [roll_card_with_floor(floor, rng) for _ in range(n)]
