@@ -1,7 +1,7 @@
 {
   "id": "maid_and_mayhem",
   "name": "Maid & Mayhem",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Collect magical maids, clean up chaos, rule the manor. A collectible Discord card game.",
   "capabilities_requested": [
     "interaction:respond",
@@ -29,6 +29,7 @@
         { "type": 1, "name": "pack",        "description": "Browse and buy card packs with coins." },
         { "type": 1, "name": "fuse",        "description": "Combine duplicate cards into the next rarity tier." },
         { "type": 1, "name": "manor",       "description": "View and upgrade your Maid Manor rooms." },
+        { "type": 1, "name": "raid",        "description": "Server-wide chaos raid — attack the boss for shared rewards." },
         { "type": 1, "name": "rank",        "description": "Your ranked-season standing and progress." },
         { "type": 1, "name": "profile",     "description": "Show your maid stats and progress." },
         { "type": 1, "name": "leaderboard", "description": "Top players in this server." }

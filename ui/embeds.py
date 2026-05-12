@@ -11,6 +11,7 @@ from data import chaos as chaos_data
 from data import elements as elements_data
 from data import maids as maids_data
 from data import packs as packs_data
+from data import raid_bosses as raid_bosses_data
 from data import ranks as ranks_data
 from data import rarities as rarities_data
 from data import rooms as rooms_data
@@ -137,6 +138,82 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
         "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
+    }
+
+
+def raid_embed(state: dict[str, Any], top: list[tuple[str, int]], display_names: dict[str, str]) -> dict[str, Any]:
+    boss = raid_bosses_data.BY_ID.get(state.get("boss_id", ""))
+    if not boss:
+        return {"title": "Raid", "description": "_(no active raid)_", "color": 0x6B7280}
+    cur = int(state.get("hp", 0))
+    mx  = int(state.get("max_hp", boss.hp))
+    bar = _hp_bar(cur, mx, width=24)
+    contribs = state.get("contributors") or {}
+    n_attackers = len([v for v in contribs.values() if int(v) > 0])
+    el = elements_data.BY_ID.get(boss.element)
+    el_tag = f"{el.emoji} {el.label}" if el else boss.element
+    lines = [f"`{bar}` **{cur:,}** / {mx:,} HP",
+             f"Element: {el_tag} · Tier: {boss.tier}",
+             f"_{boss.flavor}_"]
+    if top:
+        leader_lines = []
+        for idx, (uid, dmg) in enumerate(top, start=1):
+            medal = {1: "\U0001F947", 2: "\U0001F948", 3: "\U0001F949"}.get(idx, f"`{idx:>2}`")
+            name = display_names.get(uid, uid)
+            leader_lines.append(f"{medal} **{name}** — {dmg:,} dmg")
+        leaderboard = "\n".join(leader_lines)
+    else:
+        leaderboard = "_No one has attacked yet — be the first!_"
+    return {
+        "title": f"{boss.emoji} {boss.name} — Chaos Raid",
+        "color": 0xDC2626,
+        "description": "\n".join(lines),
+        "fields": [
+            {"name": f"Top contributors ({n_attackers} total)",
+             "value": leaderboard, "inline": False},
+        ],
+        "footer": {"text": "Click Attack to strike — 30 minute cooldown per player."},
+    }
+
+
+def raid_attack_result_embed(
+    *, damage: int, killed: bool, hp_left: int, max_hp: int,
+    boss_name: str, attacker_name: str,
+) -> dict[str, Any]:
+    title = f"💥 {attacker_name} attacks {boss_name}!"
+    desc = f"Dealt **{damage:,}** damage."
+    if killed:
+        title = f"\U0001F389 {boss_name} has been cleaned up!"
+        desc += "\nThe killing blow! Rewards will be distributed when the raid embed refreshes."
+    else:
+        desc += f"\n{boss_name} has **{hp_left:,}** / {max_hp:,} HP remaining."
+    color = 0x22C55E if killed else 0xF59E0B
+    return {"title": title, "description": desc, "color": color}
+
+
+def raid_reward_summary_embed(
+    boss_name: str, rewards: dict[str, dict[str, Any]],
+    display_names: dict[str, str],
+) -> dict[str, Any]:
+    if not rewards:
+        return {"title": "Raid resolved", "description": "_No contributors._", "color": 0x6B7280}
+    ordered = sorted(rewards.items(), key=lambda kv: kv[1].get("damage", 0), reverse=True)
+    lines = []
+    for uid, b in ordered:
+        name = display_names.get(uid, uid)
+        tier_emoji = {"champion": "\U0001F947", "officer": "\U0001F948", "helper": "\U0001F49B"}.get(b.get("tier"), "·")
+        pack_str = ""
+        if int(b.get("royal_packs", 0)):    pack_str += f"  +\U0001F451"
+        if int(b.get("polished_packs", 0)): pack_str += f"  +\U0001F4E6"
+        lines.append(
+            f"{tier_emoji} **{name}** — {b.get('damage', 0):,} dmg ({b.get('pct', 0):.0f}%) → "
+            f"\U0001FA99 +{b.get('coins', 0)} · ✨ +{b.get('xp', 0)} XP{pack_str}"
+        )
+    return {
+        "title": f"\U0001F3C6 {boss_name} — Raid rewards distributed",
+        "description": "\n".join(lines),
+        "color": 0xCA8A04,
+        "footer": {"text": "A new raid has just begun!"},
     }
 
 
