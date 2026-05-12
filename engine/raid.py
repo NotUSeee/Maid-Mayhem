@@ -22,6 +22,7 @@ from data import elements as elements_data
 from data import maids as maids_data
 from data import raid_bosses as bosses_data
 from data import tools as tools_data
+from store import sql as sql_store
 
 
 ALPHA_STRIKE_MULTIPLIER = 4
@@ -41,10 +42,14 @@ def fresh_raid(boss_id: str) -> dict[str, Any]:
     }
 
 
-def _deck_effective_cp_and_element(deck: dict[str, list[str]]) -> tuple[int, str]:
-    """Total CP of every living maid in the deck (with tool bonuses) plus
-    the lead maid's element for matchup purposes.
+def _deck_effective_cp_and_element(
+    deck: dict[str, list[str]],
+    levels: dict[tuple[str, str], int] | None = None,
+) -> tuple[int, str]:
+    """Total CP of every maid in the deck (with tool + level bonuses)
+    plus the lead maid's element for matchup purposes.
     """
+    levels = levels or {}
     maid_ids = [c for c in (deck.get("maids") or []) if c][:3]
     tool_ids = [c for c in (deck.get("tools") or []) if c][:3]
     total = 0
@@ -59,6 +64,9 @@ def _deck_effective_cp_and_element(deck: dict[str, list[str]]) -> tuple[int, str
             t = tools_data.BY_ID.get(tool)
             if t:
                 cp += t.cp_bonus
+        lvl = int(levels.get(("maid", mid), 1))
+        if lvl > 1:
+            cp += sql_store.level_bonus_cp(lvl)
         total += cp
         if not lead_element:
             lead_element = m.element
@@ -68,6 +76,7 @@ def _deck_effective_cp_and_element(deck: dict[str, list[str]]) -> tuple[int, str
 def attack(
     state: dict[str, Any], user_id: str, deck: dict[str, list[str]],
     *, rng: random.Random | None = None,
+    ctx=None,
 ) -> tuple[dict[str, Any], int, bool]:
     """Apply one attack to the raid. Returns (new_state, damage_dealt, killed).
 
@@ -81,7 +90,13 @@ def attack(
     if int(state.get("hp", 0)) <= 0:
         return state, 0, False
 
-    cp, lead_el = _deck_effective_cp_and_element(deck)
+    levels: dict[tuple[str, str], int] = {}
+    if ctx is not None and user_id:
+        try:
+            levels = sql_store.get_deck_levels(ctx, user_id, deck)
+        except Exception:
+            levels = {}
+    cp, lead_el = _deck_effective_cp_and_element(deck, levels)
     mult = elements_data.multiplier(lead_el, boss.element)
     variance = r.uniform(0.8, 1.2)
     base = max(1, cp * ALPHA_STRIKE_MULTIPLIER)

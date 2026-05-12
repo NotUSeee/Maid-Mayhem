@@ -477,10 +477,19 @@ def duel_result_embed(state: dict[str, Any]) -> dict[str, Any]:
     else:
         title = "Duel ended."
         color = 0x6B7280
+    fields = []
+    lvlups = state.get("_levelups") or {}
+    for side_key in ("a", "b"):
+        uid = state[side_key]["user_id"]
+        side_lvls = lvlups.get(uid) or []
+        block = _levelup_lines(side_lvls)
+        if block:
+            fields.append({"name": f"{state[side_key]['user_name']} — progression", "value": block, "inline": False})
     return {
         "title": title,
         "color": color,
         "description": "Rewards have been credited. Check `/maid profile`.",
+        "fields": fields,
     }
 
 
@@ -684,7 +693,25 @@ def battle_embed(state: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def battle_result_embed(state: dict[str, Any], *, won: bool, coins: int, xp: int) -> dict[str, Any]:
+def _levelup_lines(levelups: list[tuple[str, int, int]]) -> str:
+    """Format a list of (card_id, new_level, levels_gained) into a small block."""
+    if not levelups:
+        return ""
+    out = []
+    for card_id, new_level, gained in levelups:
+        m = maids_data.BY_ID.get(card_id)
+        name = m.name if m else card_id
+        if gained == 1:
+            out.append(f"✨ **{name}** reached Level **{new_level}**.")
+        else:
+            out.append(f"✨ **{name}** gained {gained} levels — now **L{new_level}**.")
+    return "\n".join(out)
+
+
+def battle_result_embed(
+    state: dict[str, Any], *, won: bool, coins: int, xp: int,
+    levelups: list[tuple[str, int, int]] | None = None,
+) -> dict[str, Any]:
     title = "\U0001F3C6 Victory" if won else "\U0001F480 Defeat"
     color = 0x22C55E if won else 0x6B7280
     desc = ("The manor is clean. For now." if won
@@ -692,6 +719,9 @@ def battle_result_embed(state: dict[str, Any], *, won: bool, coins: int, xp: int
     fields = [
         {"name": "Rewards", "value": f"\U0001FA99 {coins} coins\n✨ {xp} XP", "inline": True},
     ]
+    lvl_block = _levelup_lines(levelups or [])
+    if lvl_block:
+        fields.append({"name": "Card progression", "value": lvl_block, "inline": False})
     return {"title": title, "description": desc, "color": color, "fields": fields}
 
 

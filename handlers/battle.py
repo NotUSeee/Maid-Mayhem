@@ -76,6 +76,7 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
     coins = int(rewards.get("coins", 0))
     xp = int(rewards.get("xp", 0))
     won = (result == "win")
+    levelups: list[tuple[str, int, int]] = []
     if user_id:
         # Apply manor bonuses (Tea Room XP %, Kitchen coin %, Training Hall
         # flat XP on wins) before crediting the player.
@@ -86,10 +87,15 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
         store_sql.record_battle(
             ctx, user_id, result=result, coins=coins, xp=xp,
         )
+        # Card XP: every deck maid gets a share regardless of survival.
+        # Win pays better than loss / flee.
+        per_maid_xp = 50 if won else (10 if result == "loss" else 5)
+        deck = kv.load_deck(ctx, user_id)
+        levelups = store_sql.grant_deck_maid_xp(ctx, user_id, deck, per_maid_xp)
         if won:
             ranks_engine.award_rp(ctx, user_id, 5)   # PvE win: +5 RP
         battle_state.clear(ctx, user_id)
-    return embeds.battle_result_embed(state, won=won, coins=coins, xp=xp)
+    return embeds.battle_result_embed(state, won=won, coins=coins, xp=xp, levelups=levelups)
 
 
 def run(ctx: Context, event: dict) -> None:
@@ -118,7 +124,7 @@ def run(ctx: Context, event: dict) -> None:
         )
         return
 
-    state = battle_engine.start_battle(user_id, deck)
+    state = battle_engine.start_battle(user_id, deck, ctx=ctx)
     if state.get("result") == "no_deck":
         ctx.interaction.respond(
             content="Your deck has no maids. Set one with `/maid deck`.",

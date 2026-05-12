@@ -39,11 +39,18 @@ from data import tools as tools_data
 from engine import abilities as abilities_engine
 from engine import damage as damage_engine
 from engine import status as status_engine
+from store import sql as sql_store
 
 
 # ── State setup ─────────────────────────────────────────────────────────────
 
-def _maid_unit(maid_id: str, tool_id: str = "") -> dict[str, Any] | None:
+def _maid_unit(maid_id: str, tool_id: str = "", level: int = 1) -> dict[str, Any] | None:
+    """Build a battle-ready unit for a maid card.
+
+    Stat composition: base stats + tool bonuses (if equipped) + level
+    bonuses (+1 Max Poise per 5 levels, +1 CP per 10 levels — capped at
+    L50). Tools do not level for v1.
+    """
     m = maids_data.BY_ID.get(maid_id)
     if not m:
         return None
@@ -55,6 +62,9 @@ def _maid_unit(maid_id: str, tool_id: str = "") -> dict[str, Any] | None:
             poise += t.poise_bonus
             charm += t.charm_bonus
             speed += t.speed_bonus
+    if level > 1:
+        cp    += sql_store.level_bonus_cp(level)
+        poise += sql_store.level_bonus_poise(level)
     return {
         "kind": "maid",
         "id": m.id,
@@ -65,6 +75,7 @@ def _maid_unit(maid_id: str, tool_id: str = "") -> dict[str, Any] | None:
         "tool_id": tool_id,
         "ability_id": m.ability_id,
         "ability_name": m.ability_name,
+        "level": int(level),
         "status": {},
     }
 
@@ -90,16 +101,28 @@ def start_battle(
     deck: dict[str, list[str]],
     *,
     rng: random.Random | None = None,
+    ctx=None,
 ) -> dict[str, Any]:
-    """Compose a fresh battle state from the user's deck."""
+    """Compose a fresh battle state from the user's deck. ``ctx`` is used
+    to fetch each card's current level so the unit gets level bonuses.
+    Pass ``ctx=None`` only in tests where levels aren't meaningful (units
+    will be built at L1).
+    """
     r = rng or random
     maid_ids = [c for c in (deck.get("maids") or []) if c][:3]
     tool_ids = [c for c in (deck.get("tools") or []) if c][:3]
 
+    levels: dict[tuple[str, str], int] = {}
+    if ctx is not None and user_id:
+        try:
+            levels = sql_store.get_deck_levels(ctx, user_id, deck)
+        except Exception:
+            levels = {}
+
     player_team: list[dict[str, Any]] = []
     for i, mid in enumerate(maid_ids):
         tool = tool_ids[i] if i < len(tool_ids) else ""
-        u = _maid_unit(mid, tool)
+        u = _maid_unit(mid, tool, level=int(levels.get(("maid", mid), 1)))
         if u:
             player_team.append(u)
 

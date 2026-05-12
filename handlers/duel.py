@@ -137,6 +137,15 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
     # Polish: winner-only premium currency trickle.
     kv.add_polish(ctx, winner["user_id"], 2)
 
+    # Card XP for everyone who fought. PvP pays more than PvE.
+    win_deck = kv.load_deck(ctx, winner["user_id"])
+    lose_deck = kv.load_deck(ctx, loser["user_id"])
+    win_levelups = store_sql.grant_deck_maid_xp(ctx, winner["user_id"], win_deck, 80)
+    lose_levelups = store_sql.grant_deck_maid_xp(ctx, loser["user_id"],  lose_deck, 20)
+    state.setdefault("_levelups", {})
+    state["_levelups"][winner["user_id"]] = win_levelups
+    state["_levelups"][loser["user_id"]]  = lose_levelups
+
 
 # ── /maid duel @opponent ────────────────────────────────────────────────────
 
@@ -273,6 +282,7 @@ def _handle_accept(ctx: Context, event: dict, clicker_id: str, duel_id: str) -> 
         duel_id, pending.get("channel_id", ""),
         a_id, a_name, a_deck,
         b_id, b_name, b_deck,
+        ctx=ctx,
     )
     duel_state.save(ctx, duel_id, state)
     duel_state.clear_pending_for(ctx, a_id)

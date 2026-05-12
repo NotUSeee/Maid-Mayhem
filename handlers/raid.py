@@ -113,8 +113,11 @@ def _do_attack(ctx: Context, event: dict, user_id: str) -> None:
         return
 
     state = _ensure_raid(ctx)
-    state, dmg, killed = raid_engine.attack(state, user_id, deck)
+    state, dmg, killed = raid_engine.attack(state, user_id, deck, ctx=ctx)
     raid_state.save(ctx, state)
+
+    # Each raid attack also dusts the attacker's deck with a little card XP.
+    attack_levelups = store_sql.grant_deck_maid_xp(ctx, user_id, deck, 20)
 
     attacker_name = event.get("user_name") or "Maid"
     boss = bosses_data.BY_ID.get(state["boss_id"])

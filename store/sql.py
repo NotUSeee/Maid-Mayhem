@@ -22,6 +22,28 @@ from mmo_maid_sdk import Context
 SCHEMA_VERSION = "v1"
 _SCHEMA_FLAG_KEY = "mm:schema_installed"
 
+# Card progression caps.
+MAX_CARD_LEVEL = 50
+
+
+def xp_to_next_level(level: int) -> int:
+    """XP needed to go from ``level`` to ``level + 1``. Returns 0 at max."""
+    if level >= MAX_CARD_LEVEL:
+        return 0
+    if level < 1:
+        level = 1
+    return 10 * level
+
+
+def level_bonus_poise(level: int) -> int:
+    """+1 Max Poise every 5 levels. Caps at +10 at L50."""
+    return max(0, min(10, (level - 1) // 5))
+
+
+def level_bonus_cp(level: int) -> int:
+    """+1 CP every 10 levels. Caps at +5 at L50."""
+    return max(0, min(5, (level - 1) // 10))
+
 
 _DDL_STATEMENTS = [
     """
@@ -114,6 +136,99 @@ def owns_card(ctx: Context, user_id: str, card_type: str, card_id: str) -> bool:
         [user_id, card_type, card_id],
     )
     return bool(n and int(n) > 0)
+
+
+def get_deck_levels(
+    ctx: Context, user_id: str, deck: dict,
+) -> dict[tuple[str, str], int]:
+    """Return {(card_type, card_id): level} for every card in the deck.
+
+    A single SELECT covers up to 6 cards (3 maids + 3 tools). Cards the
+    user no longer owns map to level 1 by default.
+    """
+    pairs: list[tuple[str, str]] = []
+    for cid in (deck.get("maids") or [])[:3]:
+        if cid:
+            pairs.append(("maid", cid))
+    for cid in (deck.get("tools") or [])[:3]:
+        if cid:
+            pairs.append(("tool", cid))
+    out: dict[tuple[str, str], int] = {pair: 1 for pair in pairs}
+    if not pairs:
+        return out
+    # Build (%s,%s,%s,%s,...) tuples for the IN clause.
+    placeholders = ",".join(["(%s,%s)"] * len(pairs))
+    params: list[Any] = [user_id]
+    for ct, cid in pairs:
+        params.extend([ct, cid])
+    rows = ctx.sql.query(
+        f"""
+        SELECT card_type, card_id, level
+        FROM mm_inventory
+        WHERE user_id = %s
+          AND (card_type, card_id) IN ({placeholders})
+        """,
+        params,
+        limit=12,
+    )
+    for r in rows:
+        out[(str(r.get("card_type")), str(r.get("card_id")))] = int(r.get("level", 1))
+    return out
+
+
+def grant_deck_maid_xp(
+    ctx: Context, user_id: str, deck: dict, amount_per_maid: int,
+) -> list[tuple[str, int, int]]:
+    """Convenience: grant XP to each maid in the player's deck.
+
+    Returns ``[(card_id, new_level, levels_gained), ...]`` for any maid
+    that actually leveled up at least once. Cards the user no longer
+    owns (e.g. fused away) are silently skipped.
+    """
+    out: list[tuple[str, int, int]] = []
+    for mid in (deck.get("maids") or [])[:3]:
+        if not mid:
+            continue
+        new_level, gained = grant_card_xp(ctx, user_id, "maid", mid, amount_per_maid)
+        if gained > 0:
+            out.append((mid, new_level, gained))
+    return out
+
+
+def grant_card_xp(
+    ctx: Context, user_id: str, card_type: str, card_id: str, amount: int,
+) -> tuple[int, int]:
+    """Add ``amount`` XP to a card; auto-level-up across thresholds.
+
+    Returns ``(new_level, levels_gained)``. No-op (returns 1, 0) if the
+    user does not own the card.
+    """
+    if amount <= 0:
+        return (1, 0)
+    row = ctx.sql.query_one(
+        "SELECT level, xp FROM mm_inventory WHERE user_id=%s AND card_type=%s AND card_id=%s",
+        [user_id, card_type, card_id],
+    )
+    if not row:
+        return (1, 0)
+    cur_level = int(row.get("level", 1))
+    cur_xp    = int(row.get("xp", 0)) + int(amount)
+    levels_gained = 0
+    while cur_level < MAX_CARD_LEVEL:
+        need = xp_to_next_level(cur_level)
+        if cur_xp >= need:
+            cur_xp -= need
+            cur_level += 1
+            levels_gained += 1
+        else:
+            break
+    if cur_level >= MAX_CARD_LEVEL:
+        cur_xp = 0  # don't carry leftover at the cap
+    ctx.sql.execute(
+        "UPDATE mm_inventory SET level=%s, xp=%s WHERE user_id=%s AND card_type=%s AND card_id=%s",
+        [cur_level, cur_xp, user_id, card_type, card_id],
+    )
+    return (cur_level, levels_gained)
 
 
 def consume_card(ctx: Context, user_id: str, card_type: str, card_id: str, qty: int) -> None:

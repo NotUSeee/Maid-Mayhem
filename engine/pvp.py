@@ -28,6 +28,7 @@ from engine import abilities as abilities_engine
 from engine import battle as battle_engine
 from engine import damage as damage_engine
 from engine import status as status_engine
+from store import sql as sql_store
 
 
 OTHER = {"a": "b", "b": "a"}
@@ -51,21 +52,30 @@ def start_duel(
     b_user_id: str, b_user_name: str, b_deck: dict[str, list[str]],
     *,
     rng: random.Random | None = None,
+    ctx=None,
 ) -> dict[str, Any]:
-    """Compose a fresh PvP duel from two decks."""
-    def _build(deck):
+    """Compose a fresh PvP duel from two decks. ``ctx`` is used to fetch
+    each side's card levels for the on-equip stat bonuses.
+    """
+    def _build(user_id, deck):
         maid_ids = [c for c in (deck.get("maids") or []) if c][:3]
         tool_ids = [c for c in (deck.get("tools") or []) if c][:3]
+        levels: dict[tuple[str, str], int] = {}
+        if ctx is not None and user_id:
+            try:
+                levels = sql_store.get_deck_levels(ctx, user_id, deck)
+            except Exception:
+                levels = {}
         team = []
         for i, mid in enumerate(maid_ids):
             tool = tool_ids[i] if i < len(tool_ids) else ""
-            u = battle_engine._maid_unit(mid, tool)
+            u = battle_engine._maid_unit(mid, tool, level=int(levels.get(("maid", mid), 1)))
             if u:
                 team.append(u)
         return team
 
-    team_a = _build(a_deck)
-    team_b = _build(b_deck)
+    team_a = _build(a_user_id, a_deck)
+    team_b = _build(b_user_id, b_deck)
 
     # Higher total speed acts first. Tie -> challenger ('a').
     speed_a = sum(int(u.get("speed", 0)) for u in team_a)
