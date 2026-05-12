@@ -12,6 +12,7 @@ from data import elements as elements_data
 from data import maids as maids_data
 from data import packs as packs_data
 from data import rarities as rarities_data
+from data import rooms as rooms_data
 from data import tools as tools_data
 
 
@@ -134,6 +135,57 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
         "title": title,
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
+        "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
+    }
+
+
+def manor_embed(manor: dict[str, int], coins: int) -> dict[str, Any]:
+    """Show every room with its current level, effect at that level, and
+    the price to upgrade to the next level. Highlights affordable upgrades.
+    """
+    fields = []
+    for room in rooms_data.ALL:
+        lvl = int(manor.get(room.id, 1))
+        at_max = lvl >= rooms_data.MAX_LEVEL
+        cost = rooms_data.upgrade_cost(lvl) if not at_max else 0
+        affordable = coins >= cost and not at_max
+        lvl_bar = "▰" * lvl + "▱" * (rooms_data.MAX_LEVEL - lvl)
+        if at_max:
+            upgrade_line = "_Maxed._"
+        else:
+            check = "✅" if affordable else "❌"
+            upgrade_line = f"{check} Upgrade to L{lvl + 1} — \U0001FA99 **{cost}**"
+        fields.append({
+            "name": f"{room.emoji} {room.name} — L{lvl}/{rooms_data.MAX_LEVEL}",
+            "value": (
+                f"`{lvl_bar}`\n"
+                f"{room.description}\n"
+                f"_{room.bonus_per_level} per level_\n"
+                f"{upgrade_line}"
+            ),
+            "inline": False,
+        })
+    return {
+        "title": "\U0001F3F0 Your Maid Manor",
+        "description": f"You have **\U0001FA99 {coins}** coins.\nUpgrade rooms below to buff future rewards.",
+        "color": 0x7C3AED,
+        "fields": fields,
+    }
+
+
+def manor_upgrade_result_embed(
+    room_id: str, *, from_level: int, to_level: int, coins_left: int,
+) -> dict[str, Any]:
+    room = rooms_data.BY_ID.get(room_id)
+    if not room:
+        return {"title": "Upgrade", "description": "Room not found.", "color": 0x6B7280}
+    return {
+        "title": f"{room.emoji} {room.name} upgraded!",
+        "description": (
+            f"**L{from_level} → L{to_level}**\n"
+            f"_{room.bonus_per_level}_ now stacks {to_level} times."
+        ),
+        "color": 0x7C3AED,
         "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
     }
 

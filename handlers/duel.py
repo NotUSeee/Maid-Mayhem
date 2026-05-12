@@ -26,6 +26,7 @@ from typing import Any
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from engine import abilities as abilities_engine
+from engine import manor as manor_engine
 from engine import pvp as pvp_engine
 from store import duel_state, kv, sql as store_sql
 from ui import embeds
@@ -113,8 +114,15 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
     else:
         return
 
-    coins_win, xp_win   = 60, 50
-    coins_lose, xp_lose = 0, 10
+    base_coins_win, base_xp_win   = 60, 50
+    base_coins_lose, base_xp_lose = 0, 10
+
+    coins_win, xp_win = manor_engine.reward_bonuses_for_user(
+        ctx, winner["user_id"], coins=base_coins_win, xp=base_xp_win, is_battle_win=True,
+    )
+    coins_lose, xp_lose = manor_engine.reward_bonuses_for_user(
+        ctx, loser["user_id"], coins=base_coins_lose, xp=base_xp_lose, is_battle_win=False,
+    )
 
     kv.add_rewards(ctx, winner["user_id"], coins=coins_win,  xp=xp_win,  won=True)
     kv.add_rewards(ctx, loser["user_id"],  coins=coins_lose, xp=xp_lose, won=False)

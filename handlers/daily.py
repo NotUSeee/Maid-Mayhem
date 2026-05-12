@@ -4,12 +4,14 @@ from __future__ import annotations
 from mmo_maid_sdk import Context
 
 from engine import drops
+from engine import manor as manor_engine
 from store import sql as store_sql
 from ui import embeds
 
 
 _DAILY_KEY = "mm:daily"   # ephemeral cooldown key (per user, plugin auto-namespaces)
 _DAILY_TTL_S = 22 * 60 * 60   # 22h — slightly under 24h so day-to-day timing isn't punishing
+_DAILY_PACK_BASE = 3
 
 
 def run(ctx: Context, event: dict) -> None:
@@ -28,11 +30,14 @@ def run(ctx: Context, event: dict) -> None:
         )
         return
 
-    pack = drops.roll_pack(3)
+    pack_size = manor_engine.daily_pack_size_for_user(ctx, user_id, _DAILY_PACK_BASE)
+    pack = drops.roll_pack(pack_size)
     for card_type, card_id in pack:
         store_sql.grant_card(ctx, user_id, card_type, card_id, qty=1)
 
-    ctx.ephemeral.cooldown_set(f"{_DAILY_KEY}:{user_id}", ttl_seconds=_DAILY_TTL_S)
+    # Garden bonus: each level trims 10 min off the cooldown, min 1 minute.
+    cooldown_s = manor_engine.daily_cooldown_for_user(ctx, user_id, _DAILY_TTL_S)
+    ctx.ephemeral.cooldown_set(f"{_DAILY_KEY}:{user_id}", ttl_seconds=cooldown_s)
 
     embed = embeds.daily_pack_embed(pack)
     ctx.interaction.respond(embeds=[embed], ephemeral=False)

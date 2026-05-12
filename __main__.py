@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from mmo_maid_sdk import Plugin, Context
 
-from handlers import daily, cards, deck, battle, duel, fuse, pack, profile, leaderboard
+from handlers import daily, cards, deck, battle, duel, fuse, manor, pack, profile, leaderboard
 from store import sql as store_sql
 
 plugin = Plugin()
@@ -26,6 +26,7 @@ SUBCOMMANDS = {
     "duel":        duel.run,
     "pack":        pack.run,
     "fuse":        fuse.run,
+    "manor":       manor.run,
     "profile":     profile.run,
     "leaderboard": leaderboard.run,
 }
@@ -118,6 +119,8 @@ def route_components(ctx: Context, event: dict):
         fuse.on_component(ctx, event, parts[2:])
     elif area == "duel":
         duel.on_component(ctx, event, parts[2:])
+    elif area == "manor":
+        manor.on_component(ctx, event, parts[2:])
 
 
 if __name__ == "__main__":

@@ -104,3 +104,37 @@ def set_deck_slot(ctx: Context, user_id: str, slot_kind: str, slot_idx: int, car
     deck[slot_kind] = slots[:cap]
     save_deck(ctx, user_id, deck)
     return deck
+
+
+# ── Manor ───────────────────────────────────────────────────────────────────
+
+def _manor_key(user_id: str) -> str:
+    return f"manor:{user_id}"
+
+
+def load_manor(ctx: Context, user_id: str) -> dict[str, int]:
+    """Return {room_id: level}. Missing entries default to level 1."""
+    # Imported lazily so data/rooms doesn't have to be on import path during
+    # tests that only touch unrelated KV helpers.
+    from data import rooms as rooms_data
+    raw = ctx.kv.get(_manor_key(user_id))
+    if not isinstance(raw, dict):
+        raw = {}
+    out = {}
+    for room in rooms_data.ALL:
+        lvl = int(raw.get(room.id, 1))
+        out[room.id] = max(1, min(rooms_data.MAX_LEVEL, lvl))
+    return out
+
+
+def save_manor(ctx: Context, user_id: str, manor: dict[str, int]) -> None:
+    from data import rooms as rooms_data
+    safe = {}
+    for room in rooms_data.ALL:
+        lvl = int(manor.get(room.id, 1))
+        safe[room.id] = max(1, min(rooms_data.MAX_LEVEL, lvl))
+    ctx.kv.set(_manor_key(user_id), safe)
+
+
+def manor_room_level(ctx: Context, user_id: str, room_id: str) -> int:
+    return int(load_manor(ctx, user_id).get(room_id, 1))

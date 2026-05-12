@@ -13,6 +13,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 
 from engine import abilities as abilities_engine
 from engine import battle as battle_engine
+from engine import manor as manor_engine
 from store import battle_state, kv, sql as store_sql
 from ui import embeds
 
@@ -75,6 +76,11 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
     xp = int(rewards.get("xp", 0))
     won = (result == "win")
     if user_id:
+        # Apply manor bonuses (Tea Room XP %, Kitchen coin %, Training Hall
+        # flat XP on wins) before crediting the player.
+        coins, xp = manor_engine.reward_bonuses_for_user(
+            ctx, user_id, coins=coins, xp=xp, is_battle_win=won,
+        )
         kv.add_rewards(ctx, user_id, coins=coins, xp=xp, won=won)
         store_sql.record_battle(
             ctx, user_id, result=result, coins=coins, xp=xp,
