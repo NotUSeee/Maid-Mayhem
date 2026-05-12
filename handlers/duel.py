@@ -134,6 +134,9 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
     ranks_engine.award_rp(ctx, winner["user_id"], 25)
     ranks_engine.award_rp(ctx, loser["user_id"], -10)
 
+    # Polish: winner-only premium currency trickle.
+    kv.add_polish(ctx, winner["user_id"], 2)
+
 
 # ── /maid duel @opponent ────────────────────────────────────────────────────
 

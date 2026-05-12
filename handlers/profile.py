@@ -11,5 +11,6 @@ def run(ctx: Context, event: dict) -> None:
     user_id = str(event.get("user_id") or "")
     name = event.get("user_name") or "Maid"
     profile = kv.load_profile(ctx, user_id)
-    embed = embeds.profile_embed(profile, display_name=name)
+    cosmetics = kv.load_cosmetics(ctx, user_id)
+    embed = embeds.profile_embed(profile, display_name=name, cosmetics=cosmetics)
     ctx.interaction.respond(embeds=[embed], ephemeral=True)

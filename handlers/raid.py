@@ -177,6 +177,9 @@ def _credit_rewards(ctx: Context, rewards: dict[str, dict]) -> None:
             ctx, uid, coins=coins, xp=xp, is_battle_win=False,
         )
         kv.add_rewards(ctx, uid, coins=coins, xp=xp, won=True)
+        # Polish trickle for champions — the rare premium currency.
+        if b.get("tier") == "champion":
+            kv.add_polish(ctx, uid, 5)
         # Free packs: open them now and write cards into inventory.
         for _ in range(int(b.get("polished_packs", 0))):
             for ct, cid in drops.roll_pack_with_floor(packs_data.POLISHED.n_cards, packs_data.POLISHED.floor, rng):

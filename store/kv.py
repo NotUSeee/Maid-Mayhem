@@ -19,6 +19,7 @@ DEFAULT_PROFILE: dict[str, Any] = {
     "wins": 0,
     "losses": 0,
     "prestige": 0,
+    "polish": 0,
 }
 
 
@@ -138,3 +139,44 @@ def save_manor(ctx: Context, user_id: str, manor: dict[str, int]) -> None:
 
 def manor_room_level(ctx: Context, user_id: str, room_id: str) -> int:
     return int(load_manor(ctx, user_id).get(room_id, 1))
+
+
+def add_polish(ctx: Context, user_id: str, amount: int) -> int:
+    """Atomic-ish polish credit. Returns the new balance."""
+    p = load_profile(ctx, user_id)
+    p["polish"] = max(0, int(p.get("polish", 0)) + int(amount))
+    save_profile(ctx, user_id, p)
+    return int(p["polish"])
+
+
+# ── Cosmetics ───────────────────────────────────────────────────────────────
+
+DEFAULT_COSMETICS: dict[str, Any] = {
+    "owned": [],                      # list of cosmetic_id
+    "equipped": {"title": "", "badge": "", "color": 0},
+}
+
+
+def _cosmetics_key(user_id: str) -> str:
+    return f"cosmetics:{user_id}"
+
+
+def load_cosmetics(ctx: Context, user_id: str) -> dict[str, Any]:
+    raw = ctx.kv.get(_cosmetics_key(user_id))
+    if not isinstance(raw, dict):
+        return {"owned": [], "equipped": {**DEFAULT_COSMETICS["equipped"]}}
+    return {
+        "owned": list(raw.get("owned") or []),
+        "equipped": {
+            "title": str((raw.get("equipped") or {}).get("title", "")),
+            "badge": str((raw.get("equipped") or {}).get("badge", "")),
+            "color": int((raw.get("equipped") or {}).get("color", 0) or 0),
+        },
+    }
+
+
+def save_cosmetics(ctx: Context, user_id: str, cosmetics: dict[str, Any]) -> None:
+    ctx.kv.set(_cosmetics_key(user_id), {
+        "owned": list(cosmetics.get("owned") or []),
+        "equipped": cosmetics.get("equipped") or {},
+    })

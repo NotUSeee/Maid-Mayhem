@@ -136,6 +136,18 @@ def ensure_season_current(ctx: "Context", user_id: str) -> dict[str, Any] | None
         from store import kv as kv_store, sql as sql_store
         profile = kv_store.load_profile(ctx, user_id)
         profile["coins"] = int(profile.get("coins", 0)) + int(reward.coins)
+        # Polish: scale with peak tier. Mid tiers get a touch; top gets a fat stack.
+        polish_bonus = {
+            "polished_maid":      3,
+            "senior_maid":        5,
+            "head_maid":          8,
+            "royal_attendant":   12,
+            "chaos_cleaner":     20,
+            "mythic_housekeeper":40,
+        }.get(prior_peak, 0)
+        if polish_bonus:
+            profile["polish"] = int(profile.get("polish", 0)) + polish_bonus
+            summary["polish"] = polish_bonus
         kv_store.save_profile(ctx, user_id, profile)
         summary["coins"] = reward.coins
 

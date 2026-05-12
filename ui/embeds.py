@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from data import chaos as chaos_data
+from data import cosmetics as cosmetics_data
 from data import elements as elements_data
 from data import maids as maids_data
 from data import packs as packs_data
@@ -20,19 +21,48 @@ from data import tools as tools_data
 
 # ── Profile ─────────────────────────────────────────────────────────────────
 
-def profile_embed(profile: dict[str, Any], display_name: str) -> dict[str, Any]:
+def profile_embed(
+    profile: dict[str, Any], display_name: str,
+    cosmetics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     xp = int(profile.get("xp", 0))
     level = int(profile.get("level", 1))
     wins = int(profile.get("wins", 0))
     losses = int(profile.get("losses", 0))
     coins = int(profile.get("coins", 0))
+    polish = int(profile.get("polish", 0))
     next_lvl_xp = 50 * (level + 1) * level
+
+    # Equipped cosmetics (optional)
+    color = 0xCA8A04
+    title_line = ""
+    badge_emoji = ""
+    if cosmetics:
+        eq = cosmetics.get("equipped") or {}
+        if int(eq.get("color", 0)) > 0:
+            color = int(eq.get("color", 0))
+        if eq.get("title"):
+            c = cosmetics_data.BY_ID.get(str(eq["title"]))
+            if c and c.slot == "title":
+                title_line = str(c.value)
+        if eq.get("badge"):
+            c = cosmetics_data.BY_ID.get(str(eq["badge"]))
+            if c and c.slot == "badge":
+                badge_emoji = str(c.value)
+
+    title = f"\U0001F9F9 {display_name}'s Maid Manor"
+    if title_line:
+        title = f"{badge_emoji + ' ' if badge_emoji else ''}{display_name} — {title_line}"
+    elif badge_emoji:
+        title = f"{badge_emoji} {display_name}'s Maid Manor"
+
     return {
-        "title": f"\U0001F9F9 {display_name}'s Maid Manor",
-        "color": 0xCA8A04,
+        "title": title,
+        "color": color,
         "fields": [
             {"name": "Level",   "value": f"**{level}**  ({xp}/{next_lvl_xp} XP)", "inline": True},
             {"name": "Coins",   "value": f"\U0001FA99 {coins}", "inline": True},
+            {"name": "Polish",  "value": f"✨ {polish}",        "inline": True},
             {"name": "Record",  "value": f"{wins}W / {losses}L", "inline": True},
         ],
         "footer": {"text": "Use /maid daily to claim today's pack."},
@@ -138,6 +168,59 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
         "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
+    }
+
+
+def cosmetics_embed(profile: dict[str, Any], cosmetics: dict[str, Any]) -> dict[str, Any]:
+    polish = int(profile.get("polish", 0))
+    owned = set(cosmetics.get("owned") or [])
+    equipped = cosmetics.get("equipped") or {}
+
+    def _slot_section(slot: str) -> str:
+        lines = []
+        for c in cosmetics_data.by_slot(slot):
+            is_owned = c.id in owned
+            is_equipped = (
+                (slot == "color" and int(equipped.get("color", 0)) == int(c.value))
+                or (slot != "color" and equipped.get(slot) == c.id)
+            )
+            mark = "✅" if is_equipped else ("\U0001F3F7" if is_owned else f"✨{c.polish_cost}")
+            preview = f"_{c.value}_" if slot == "title" else (
+                str(c.value) if slot == "badge" else f"#{int(c.value):06X}"
+            )
+            lines.append(f"{mark}  **{c.name}** — {preview}")
+        return "\n".join(lines) or "_(none)_"
+
+    return {
+        "title": "✨ Cosmetic Shop",
+        "color": int(equipped.get("color", 0)) or 0xCA8A04,
+        "description": f"You have **✨ {polish}** Polish.",
+        "fields": [
+            {"name": "Titles",  "value": _slot_section("title"), "inline": False},
+            {"name": "Badges",  "value": _slot_section("badge"), "inline": False},
+            {"name": "Colors",  "value": _slot_section("color"), "inline": False},
+        ],
+        "footer": {"text": "✨ = price · 🏷 = owned · ✅ = equipped. Use the menus to buy or equip."},
+    }
+
+
+def cosmetic_buy_result_embed(cosmetic, *, polish_left: int) -> dict[str, Any]:
+    return {
+        "title": "\U0001F381 Cosmetic acquired",
+        "description": f"**{cosmetic.name}** added to your collection.\n_{cosmetic.flavor}_",
+        "color": int(cosmetic.value) if cosmetic.slot == "color" else 0xCA8A04,
+        "footer": {"text": f"Remaining: ✨ {polish_left}. Equip it via /maid cosmetics."},
+    }
+
+
+def cosmetic_equip_result_embed(cosmetic) -> dict[str, Any]:
+    preview = f"_{cosmetic.value}_" if cosmetic.slot == "title" else (
+        str(cosmetic.value) if cosmetic.slot == "badge" else f"#{int(cosmetic.value):06X}"
+    )
+    return {
+        "title": f"Equipped: {cosmetic.name}",
+        "description": f"Slot: **{cosmetic.slot}** — {preview}",
+        "color": int(cosmetic.value) if cosmetic.slot == "color" else 0xCA8A04,
     }
 
 
@@ -265,6 +348,9 @@ def season_rollover_embed(summary: dict[str, Any], display_name: str) -> dict[st
         lines.append(f"  \U0001F451 {royal}× Royal Service Pack opened")
     if summary.get("guaranteed_mythic"):
         lines.append("  ❤️‍\U0001F525 Bonus: 1 guaranteed Mythic card")
+    polish = int(summary.get("polish", 0))
+    if polish:
+        lines.append(f"  ✨ +{polish} Polish")
     return {
         "title": "\U0001F389 Season ended — rewards delivered",
         "description": "\n".join(lines) + "\n\nUse `/maid cards` to see the new arrivals.",

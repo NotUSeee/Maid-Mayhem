@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from mmo_maid_sdk import Plugin, Context
 
-from handlers import daily, cards, deck, battle, duel, fuse, manor, pack, profile, raid, rank, leaderboard
+from handlers import daily, cards, deck, battle, cosmetics, duel, fuse, manor, pack, profile, raid, rank, leaderboard
 from engine import ranks as ranks_engine
 from store import sql as store_sql
 from ui import embeds as ui_embeds
@@ -31,6 +31,7 @@ SUBCOMMANDS = {
     "manor":       manor.run,
     "raid":        raid.run,
     "rank":        rank.run,
+    "cosmetics":   cosmetics.run,
     "profile":     profile.run,
     "leaderboard": leaderboard.run,
 }
@@ -150,6 +151,8 @@ def route_components(ctx: Context, event: dict):
         manor.on_component(ctx, event, parts[2:])
     elif area == "raid":
         raid.on_component(ctx, event, parts[2:])
+    elif area == "cosmetics":
+        cosmetics.on_component(ctx, event, parts[2:])
 
 
 if __name__ == "__main__":
