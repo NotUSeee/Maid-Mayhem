@@ -27,6 +27,7 @@ from typing import Any
 from engine import abilities as abilities_engine
 from engine import battle as battle_engine
 from engine import damage as damage_engine
+from engine import status as status_engine
 
 
 OTHER = {"a": "b", "b": "a"}
@@ -106,17 +107,24 @@ def _basic_attack(
             continue
         if int(m.get("poise", 0)) <= 0:
             continue
+        if status_engine.is_frozen_skip(m):
+            log.append(f"{m['name']} is frozen and skips their turn.")
+            continue
         t = _lowest_poise_idx(defenders)
         if t is None:
             break
         target = defenders[t]
         dmg = damage_engine.attack_damage(
-            int(m["cp"]), str(m.get("element", "")), str(target.get("element", "")),
+            status_engine.effective_cp(m), str(m.get("element", "")), str(target.get("element", "")),
             defending=defender_defending, rng=r,
         )
-        target["poise"] = max(0, int(target["poise"]) - dmg)
-        log.append(f"{m['name']} hits {target['name']} for {dmg}.")
-        if target["poise"] == 0:
+        landed = status_engine.apply_raw_damage(target, dmg)
+        absorbed = dmg - landed
+        if absorbed > 0:
+            log.append(f"{m['name']} hits {target['name']} for {dmg} ({absorbed} blocked by shield).")
+        else:
+            log.append(f"{m['name']} hits {target['name']} for {dmg}.")
+        if int(target.get("poise", 0)) == 0:
             log.append(f"{target['name']} is cleaned up.")
 
 
@@ -154,6 +162,9 @@ def take_turn(
         # End-of-turn cooldown decrement still happens
         side_me["ability_cooldowns"] = [max(0, c - 1) for c in side_me["ability_cooldowns"]]
         return _advance(state, log)
+
+    # Status tick at the start of the active side's phase.
+    status_engine.tick_phase_start(side_me["team"], log)
 
     # Defender's "defending" applies once, then drops
     defender_defending = bool(side_them.get("defending", False))

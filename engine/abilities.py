@@ -15,6 +15,8 @@ import random
 from dataclasses import dataclass
 from typing import Any, Callable
 
+from engine import status as status_engine
+
 # An ability's effect: takes (state, source_idx, rng) and mutates state in
 # place, returning a list of human-readable log lines.
 AbilityFn = Callable[[dict[str, Any], int, random.Random], list[str]]
@@ -198,6 +200,125 @@ def _self_buff_speed(amount: int) -> AbilityFn:
     return fn
 
 
+# ── Status-applying builders ────────────────────────────────────────────────
+
+def _freeze_enemy(turns: int) -> AbilityFn:
+    def fn(state, src, rng):
+        enemies = state["enemy_team"]
+        idx = _weakest_idx(enemies)
+        if idx is None:
+            return [f"{_name(state['player_team'][src])} chills the air, but nothing's there."]
+        target = enemies[idx]
+        status_engine.add_freeze(target, turns)
+        return [f"{_name(state['player_team'][src])} freezes {_name(target)} for {turns} turn(s)."]
+    return fn
+
+
+def _poison_enemy_with_heal(heal: int, poison_dmg: int, poison_turns: int) -> AbilityFn:
+    """Heal weakest ally AND poison weakest enemy."""
+    def fn(state, src, rng):
+        team = state["player_team"]
+        enemies = state["enemy_team"]
+        lines = []
+        ally_idx = _weakest_idx(team, exclude=src)
+        if ally_idx is None:
+            ally_idx = src
+        ally = team[ally_idx]
+        healed = _heal(ally, heal)
+        lines.append(f"{_name(team[src])} restores {_name(ally)} for {healed}.")
+        en_idx = _weakest_idx(enemies)
+        if en_idx is not None:
+            target = enemies[en_idx]
+            status_engine.add_poison(target, poison_dmg, poison_turns)
+            lines.append(f"...and poisons {_name(target)} ({poison_dmg}/turn × {poison_turns}).")
+        return lines
+    return fn
+
+
+def _debuff_enemy_cp(amount: int, turns: int, *, also_damage: int = 0) -> AbilityFn:
+    """Reduce target's CP for ``turns``. Optionally also deal immediate damage."""
+    def fn(state, src, rng):
+        enemies = state["enemy_team"]
+        idx = _weakest_idx(enemies)
+        if idx is None:
+            return [f"{_name(state['player_team'][src])} sizes up nobody in particular."]
+        target = enemies[idx]
+        lines = []
+        if also_damage > 0:
+            dealt = _damage(target, also_damage)
+            lines.append(f"{_name(state['player_team'][src])} catches {_name(target)} for {dealt}.")
+            if int(target["poise"]) == 0:
+                lines.append(f"{_name(target)} is cleaned up.")
+                return lines
+        status_engine.add_cp_mod(target, -abs(amount), turns)
+        lines.append(f"{_name(target)}'s Clean Power drops by {amount} for {turns} turn(s).")
+        return lines
+    return fn
+
+
+def _buff_ally_cp(amount: int, turns: int) -> AbilityFn:
+    def fn(state, src, rng):
+        team = state["player_team"]
+        ally_idx = _weakest_idx(team, exclude=src)
+        if ally_idx is None:
+            ally_idx = src
+        ally = team[ally_idx]
+        status_engine.add_cp_mod(ally, abs(amount), turns)
+        return [f"{_name(team[src])} buffs {_name(ally)}: +{amount} CP for {turns} turn(s)."]
+    return fn
+
+
+def _shield_all(amount: int) -> AbilityFn:
+    def fn(state, src, rng):
+        team = state["player_team"]
+        for u in team:
+            if int(u.get("poise", 0)) > 0:
+                status_engine.add_shield(u, amount)
+        return [f"{_name(team[src])} grants the whole crew a {amount}-Poise shield."]
+    return fn
+
+
+def _shield_self_and_thorns(shield_amount: int) -> AbilityFn:
+    """Self shield (Drosera's Bramble Shroud — substitute for real thorns)."""
+    def fn(state, src, rng):
+        m = state["player_team"][src]
+        status_engine.add_shield(m, shield_amount)
+        return [f"{_name(m)} sprouts a {shield_amount}-Poise bramble shield."]
+    return fn
+
+
+def _cleanse_and_heal(heal: int) -> AbilityFn:
+    def fn(state, src, rng):
+        team = state["player_team"]
+        ally_idx = _weakest_idx(team, exclude=src)
+        if ally_idx is None:
+            ally_idx = src
+        ally = team[ally_idx]
+        cleared = status_engine.clear_negative(ally)
+        healed = _heal(ally, heal)
+        line = f"{_name(team[src])} restores {_name(ally)} for {healed}"
+        line += " and cleanses their afflictions." if cleared else "."
+        return [line]
+    return fn
+
+
+def _heal_all_and_cleanse(amount: int) -> AbilityFn:
+    def fn(state, src, rng):
+        team = state["player_team"]
+        lines = [f"{_name(team[src])} restores order to the manor."]
+        cleared_any = False
+        total = 0
+        for u in team:
+            if int(u.get("poise", 0)) > 0:
+                if status_engine.clear_negative(u):
+                    cleared_any = True
+                total += _heal(u, amount)
+        suffix = " Debuffs cleansed across the team." if cleared_any else ""
+        lines.append(f"Healed +{total} Poise across the team.{suffix}")
+        return lines
+    return fn
+
+
 # ── Registry ────────────────────────────────────────────────────────────────
 
 REGISTRY: dict[str, Ability] = {
@@ -211,17 +332,17 @@ REGISTRY: dict[str, Ability] = {
     "silver_polish":       Ability("silver_polish",       "Silver Polish",      3,
         "Heal an ally for 6.",                                   _heal_ally(6)),
     "tea_heal_poison":     Ability("tea_heal_poison",     "Perfect Tea",        3,
-        "Heal an ally for 3 and deal 5 to an enemy.",            _heal_ally_and_strike(3, 5)),
+        "Heal an ally for 3 and poison an enemy (2/turn × 3).",  _poison_enemy_with_heal(3, 2, 3)),
     "cleanse_ally":        Ability("cleanse_ally",        "Steady Flame",       2,
-        "Heal an ally for 4.",                                   _heal_ally(4)),
+        "Heal an ally for 4 and cleanse their afflictions.",     _cleanse_and_heal(4)),
     "shield_all_3":        Ability("shield_all_3",        "Morning Aegis",      3,
-        "Heal all allies for 4.",                                _heal_all(4)),
+        "Grant all allies a 4-Poise shield.",                    _shield_all(4)),
     "buff_ally_cp_2":      Ability("buff_ally_cp_2",      "Crown Polish",       2,
-        "Heal an ally for 5.",                                   _heal_ally(5)),
+        "Give an ally +2 Clean Power for 2 turns.",              _buff_ally_cp(2, 2)),
     "all_allies_plus_speed_2": Ability("all_allies_plus_speed_2", "Synchronize", 3,
         "Heal all allies for 2.",                                _all_allies_small_heal()),
     "order_restored":      Ability("order_restored",      "Order Restored",     3,
-        "Heal all allies for 5.",                                _heal_all(5)),
+        "Heal all allies for 5 and cleanse the whole team.",     _heal_all_and_cleanse(5)),
 
     # Damage
     "attack_bonus_1":      Ability("attack_bonus_1",      "Quick Singe",        2,
@@ -233,22 +354,21 @@ REGISTRY: dict[str, Ability] = {
     "bonus_action_to_ally":Ability("bonus_action_to_ally","Wind-Up",            3,
         "Hit twice for 4 each.",                                 _double_tap(4)),
     "borrowed_silverware": Ability("borrowed_silverware", "Borrowed Silverware",3,
-        "Deal 9 damage to the weakest enemy.",                   _strike(9)),
+        "Deal 5 and steal 2 Clean Power for 2 turns.",           _debuff_enemy_cp(2, 2, also_damage=5)),
 
-    # Damage-substitutes (these flavored as debuffs in v1; v1.2 will add
-    # real multi-turn debuff machinery and rewire these).
+    # Debuffs (real status effects now, not damage substitutes)
     "slow_enemy_speed_2":  Ability("slow_enemy_speed_2",  "Cold Shoulder",      2,
-        "Deal 4 damage to an enemy.",                            _strike(4)),
+        "Reduce an enemy's CP by 2 for 2 turns.",                _debuff_enemy_cp(2, 2)),
     "debuff_enemy_cp_1":   Ability("debuff_enemy_cp_1",   "Hush Hush",          2,
-        "Deal 4 damage to an enemy.",                            _strike(4)),
+        "Reduce an enemy's CP by 2 for 2 turns.",                _debuff_enemy_cp(2, 2)),
     "freeze_enemy_skip_turn": Ability("freeze_enemy_skip_turn", "Drifting Hush",3,
-        "Deal 6 damage to an enemy.",                            _strike(6)),
+        "Freeze an enemy for 1 turn (they skip their next attack).", _freeze_enemy(1)),
 
     # Self
     "buff_self_speed_1":   Ability("buff_self_speed_1",   "Spring-Loaded",      3,
         "Permanently gain +2 Speed this battle.",                _self_buff_speed(2)),
     "thorns_self":         Ability("thorns_self",         "Bramble Shroud",     2,
-        "Heal yourself for 4.",                                  _self_heal(4)),
+        "Gain a 4-Poise shield.",                                _shield_self_and_thorns(4)),
 }
 
 

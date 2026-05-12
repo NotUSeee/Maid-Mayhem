@@ -38,6 +38,7 @@ from data import maids as maids_data
 from data import tools as tools_data
 from engine import abilities as abilities_engine
 from engine import damage as damage_engine
+from engine import status as status_engine
 
 
 # ── State setup ─────────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ def _maid_unit(maid_id: str, tool_id: str = "") -> dict[str, Any] | None:
         "tool_id": tool_id,
         "ability_id": m.ability_id,
         "ability_name": m.ability_name,
+        "status": {},
     }
 
 
@@ -79,6 +81,7 @@ def _chaos_unit(chaos_id: str) -> dict[str, Any] | None:
         "cp": c.clean_power, "charm": 0, "speed": c.speed,
         "poise": c.poise, "max_poise": c.poise,
         "tool_id": "",
+        "status": {},
     }
 
 
@@ -164,24 +167,32 @@ def _basic_attack_team(
     skip_idx: int | None = None,
 ) -> None:
     """Each living player maid takes one basic attack against the lowest-poise
-    living enemy. Mutates ``enemies`` and ``log`` in place.
+    living enemy. Mutates ``enemies`` and ``log`` in place. Frozen units
+    skip and consume one freeze stack; shield absorbs before poise.
     """
     for i, m in enumerate(player):
         if i == skip_idx:
             continue
         if int(m.get("poise", 0)) <= 0:
             continue
+        if status_engine.is_frozen_skip(m):
+            log.append(f"{m['name']} is frozen and skips their turn.")
+            continue
         t_idx = _pick_target(enemies, r)
         if t_idx is None:
             break
         target = enemies[t_idx]
         dmg = damage_engine.attack_damage(
-            int(m["cp"]), str(m.get("element", "")),
+            status_engine.effective_cp(m), str(m.get("element", "")),
             str(target.get("element", "")), rng=r,
         )
-        target["poise"] = max(0, int(target["poise"]) - dmg)
-        log.append(f"{m['name']} hits {target['name']} for {dmg}.")
-        if target["poise"] == 0:
+        landed = status_engine.apply_raw_damage(target, dmg)
+        absorbed = dmg - landed
+        if absorbed > 0:
+            log.append(f"{m['name']} hits {target['name']} for {dmg} ({absorbed} blocked by shield).")
+        else:
+            log.append(f"{m['name']} hits {target['name']} for {dmg}.")
+        if int(target.get("poise", 0)) == 0:
             log.append(f"{target['name']} is cleaned up.")
 
 
@@ -219,6 +230,9 @@ def take_turn(
     defending = (action == "defend")
     if defending:
         log.append("Your maids brace for impact (incoming damage halved).")
+
+    # Status tick for player team at the start of their phase.
+    status_engine.tick_phase_start(player, log)
 
     # ── Player phase ────────────────────────────────────────────────────────
     ability_maid_idx: int | None = None
@@ -276,21 +290,31 @@ def take_turn(
         }
 
     # ── Enemy phase ─────────────────────────────────────────────────────────
+    # Status tick for enemy team at the start of their phase.
+    status_engine.tick_phase_start(enemies, log)
+
     for e in enemies:
         if int(e.get("poise", 0)) <= 0:
+            continue
+        if status_engine.is_frozen_skip(e):
+            log.append(f"{e['name']} is frozen and skips their turn.")
             continue
         t_idx = _pick_target(player, r)
         if t_idx is None:
             break
         target = player[t_idx]
         dmg = damage_engine.attack_damage(
-            int(e["cp"]), str(e.get("element", "")),
+            status_engine.effective_cp(e), str(e.get("element", "")),
             str(target.get("element", "")),
             defending=defending, rng=r,
         )
-        target["poise"] = max(0, int(target["poise"]) - dmg)
-        log.append(f"{e['name']} strikes {target['name']} for {dmg}.")
-        if target["poise"] == 0:
+        landed = status_engine.apply_raw_damage(target, dmg)
+        absorbed = dmg - landed
+        if absorbed > 0:
+            log.append(f"{e['name']} strikes {target['name']} for {dmg} ({absorbed} blocked by shield).")
+        else:
+            log.append(f"{e['name']} strikes {target['name']} for {dmg}.")
+        if int(target.get("poise", 0)) == 0:
             log.append(f"{target['name']} is overwhelmed.")
 
     result = _check_terminal({**state, "player_team": player, "enemy_team": enemies})
