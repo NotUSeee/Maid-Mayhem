@@ -14,6 +14,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 
 from data import packs as packs_data
 from engine import drops
+from engine import quests as quests_engine
 from store import kv, sql as store_sql
 from ui import embeds
 
@@ -75,6 +76,8 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
     pulls = drops.roll_pack_with_floor(pack.n_cards, pack.floor)
     for card_type, card_id in pulls:
         store_sql.grant_card(ctx, user_id, card_type, card_id, qty=1)
+
+    quests_engine.bump(ctx, user_id, "pack_open")
 
     ctx.interaction.respond(
         embeds=[embeds.pack_reveal_embed(pack.id, pulls, coins_left=profile["coins"])],

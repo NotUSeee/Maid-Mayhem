@@ -18,7 +18,7 @@ from __future__ import annotations
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from data import raid_bosses as bosses_data
-from engine import drops, manor as manor_engine, raid as raid_engine, ranks as ranks_engine
+from engine import drops, manor as manor_engine, quests as quests_engine, raid as raid_engine, ranks as ranks_engine
 from data import packs as packs_data
 from store import kv, raid_state, sql as store_sql
 from ui import embeds
@@ -118,6 +118,9 @@ def _do_attack(ctx: Context, event: dict, user_id: str) -> None:
 
     # Each raid attack also dusts the attacker's deck with a little card XP.
     attack_levelups = store_sql.grant_deck_maid_xp(ctx, user_id, deck, 20)
+
+    # Quest counter — every raid attack ticks the daily/weekly raid quests.
+    quests_engine.bump(ctx, user_id, "raid_attack")
 
     attacker_name = event.get("user_name") or "Maid"
     boss = bosses_data.BY_ID.get(state["boss_id"])

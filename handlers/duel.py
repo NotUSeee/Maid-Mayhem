@@ -28,6 +28,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 from engine import abilities as abilities_engine
 from engine import manor as manor_engine
 from engine import pvp as pvp_engine
+from engine import quests as quests_engine
 from engine import ranks as ranks_engine
 from store import duel_state, kv, sql as store_sql
 from ui import embeds
@@ -136,6 +137,9 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
 
     # Polish: winner-only premium currency trickle.
     kv.add_polish(ctx, winner["user_id"], 2)
+
+    # Quest counter — only counted on a true win, not a forfeit-by-flee.
+    quests_engine.bump(ctx, winner["user_id"], "pvp_win")
 
     # Card XP for everyone who fought. PvP pays more than PvE.
     win_deck = kv.load_deck(ctx, winner["user_id"])

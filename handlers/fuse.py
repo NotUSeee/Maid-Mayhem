@@ -20,6 +20,7 @@ from mmo_maid_sdk import ActionRow, Button, Context, SelectMenu, SelectOption
 from data import fusion as fusion_data
 from data import rarities as rarities_data
 from engine import fusion as fusion_engine
+from engine import quests as quests_engine
 from store import sql as store_sql
 from ui import embeds
 
@@ -150,6 +151,8 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
 
         result_type, result_id = fusion_engine.roll_output(recipe.to_rarity)
         store_sql.grant_card(ctx, user_id, result_type, result_id, qty=1)
+
+        quests_engine.bump(ctx, user_id, "card_fuse")
 
         ctx.interaction.respond(
             embeds=[embeds.fusion_result_embed(plan, result_type, result_id)],

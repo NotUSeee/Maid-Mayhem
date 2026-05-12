@@ -5,6 +5,7 @@ from mmo_maid_sdk import Context
 
 from engine import drops
 from engine import manor as manor_engine
+from engine import quests as quests_engine
 from engine import ranks as ranks_engine
 from store import kv, sql as store_sql
 from ui import embeds
@@ -43,6 +44,9 @@ def run(ctx: Context, event: dict) -> None:
     # Award rank points and a sliver of Polish for showing up.
     ranks_engine.award_rp(ctx, user_id, 5)
     kv.add_polish(ctx, user_id, 1)
+
+    # /maid daily counts as a pack-open for quest purposes.
+    quests_engine.bump(ctx, user_id, "pack_open")
 
     embed = embeds.daily_pack_embed(pack)
     ctx.interaction.respond(embeds=[embed], ephemeral=False)

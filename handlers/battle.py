@@ -14,6 +14,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 from engine import abilities as abilities_engine
 from engine import battle as battle_engine
 from engine import manor as manor_engine
+from engine import quests as quests_engine
 from engine import ranks as ranks_engine
 from store import battle_state, kv, sql as store_sql
 from ui import embeds
@@ -94,6 +95,7 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
         levelups = store_sql.grant_deck_maid_xp(ctx, user_id, deck, per_maid_xp)
         if won:
             ranks_engine.award_rp(ctx, user_id, 5)   # PvE win: +5 RP
+            quests_engine.bump(ctx, user_id, "pve_win")
         battle_state.clear(ctx, user_id)
     return embeds.battle_result_embed(state, won=won, coins=coins, xp=xp, levelups=levelups)
 

@@ -171,6 +171,64 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
     }
 
 
+def quests_embed(state: dict[str, Any]) -> dict[str, Any]:
+    from data import quests as quests_data
+
+    def _quest_lines(bucket: list[dict[str, Any]]) -> str:
+        if not bucket:
+            return "_(none active)_"
+        lines = []
+        for q in bucket:
+            t = quests_data.by_id(q.get("id", ""))
+            if not t:
+                continue
+            prog   = int(q.get("progress", 0))
+            target = int(q.get("target", 1))
+            pct    = int(round(100 * prog / max(1, target)))
+            filled = max(0, min(10, round(pct / 10)))
+            bar    = "▰" * filled + "▱" * (10 - filled)
+            if q.get("claimed"):
+                status = "✅ claimed"
+            elif prog >= target:
+                status = "🎁 ready to claim"
+            else:
+                status = f"{prog}/{target}"
+            reward = f"\U0001FA99 +{t.reward_coins}  ✨ +{t.reward_xp} XP"
+            if t.reward_polish:
+                reward += f"  ✨P +{t.reward_polish}"
+            lines.append(
+                f"**{t.name}**\n  `{bar}` {status} — {t.description.format(target=target)}\n  Reward: {reward}"
+            )
+        return "\n\n".join(lines)
+
+    daily  = state.get("daily")  or []
+    weekly = state.get("weekly") or []
+    return {
+        "title": "\U0001F4DC Quests",
+        "color": 0x6366F1,
+        "description": (
+            f"Daily — resets at 00:00 UTC ({state.get('daily_date', '?')})\n"
+            f"Weekly — resets on Monday ({state.get('weekly_date', '?')})"
+        ),
+        "fields": [
+            {"name": "\U0001F305 Daily",  "value": _quest_lines(daily),  "inline": False},
+            {"name": "\U0001F4C5 Weekly", "value": _quest_lines(weekly), "inline": False},
+        ],
+        "footer": {"text": "Click Claim under each completed quest to collect the reward."},
+    }
+
+
+def quest_claim_embed(reward: dict[str, Any], *, coins: int, xp: int) -> dict[str, Any]:
+    lines = [f"  \U0001FA99 +{coins} coins", f"  ✨ +{xp} XP"]
+    if int(reward.get("polish", 0)) > 0:
+        lines.append(f"  ✨ +{int(reward['polish'])} Polish")
+    return {
+        "title": f"\U0001F389 Quest claimed: {reward.get('name', '?')}",
+        "description": "\n".join(lines),
+        "color": 0x22C55E,
+    }
+
+
 def cosmetics_embed(profile: dict[str, Any], cosmetics: dict[str, Any]) -> dict[str, Any]:
     polish = int(profile.get("polish", 0))
     owned = set(cosmetics.get("owned") or [])
