@@ -28,6 +28,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 from engine import abilities as abilities_engine
 from engine import manor as manor_engine
 from engine import pvp as pvp_engine
+from engine import ranks as ranks_engine
 from store import duel_state, kv, sql as store_sql
 from ui import embeds
 
@@ -128,6 +129,10 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
     kv.add_rewards(ctx, loser["user_id"],  coins=coins_lose, xp=xp_lose, won=False)
     store_sql.record_battle(ctx, winner["user_id"], result="win",  coins=coins_win,  xp=xp_win)
     store_sql.record_battle(ctx, loser["user_id"],  result="loss", coins=coins_lose, xp=xp_lose)
+
+    # PvP ranked-points: winner +25, loser -10 (engine floors at 0).
+    ranks_engine.award_rp(ctx, winner["user_id"], 25)
+    ranks_engine.award_rp(ctx, loser["user_id"], -10)
 
 
 # ── /maid duel @opponent ────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ from mmo_maid_sdk import ActionRow, Button, Context
 from engine import abilities as abilities_engine
 from engine import battle as battle_engine
 from engine import manor as manor_engine
+from engine import ranks as ranks_engine
 from store import battle_state, kv, sql as store_sql
 from ui import embeds
 
@@ -85,6 +86,8 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
         store_sql.record_battle(
             ctx, user_id, result=result, coins=coins, xp=xp,
         )
+        if won:
+            ranks_engine.award_rp(ctx, user_id, 5)   # PvE win: +5 RP
         battle_state.clear(ctx, user_id)
     return embeds.battle_result_embed(state, won=won, coins=coins, xp=xp)
 

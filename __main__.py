@@ -12,8 +12,10 @@ from __future__ import annotations
 
 from mmo_maid_sdk import Plugin, Context
 
-from handlers import daily, cards, deck, battle, duel, fuse, manor, pack, profile, leaderboard
+from handlers import daily, cards, deck, battle, duel, fuse, manor, pack, profile, rank, leaderboard
+from engine import ranks as ranks_engine
 from store import sql as store_sql
+from ui import embeds as ui_embeds
 
 plugin = Plugin()
 
@@ -27,6 +29,7 @@ SUBCOMMANDS = {
     "pack":        pack.run,
     "fuse":        fuse.run,
     "manor":       manor.run,
+    "rank":        rank.run,
     "profile":     profile.run,
     "leaderboard": leaderboard.run,
 }
@@ -74,6 +77,29 @@ def handle_maid(ctx: Context, event: dict):
             ephemeral=True,
         )
         return
+
+    # Check for a season rollover before any subcommand runs. If we
+    # crossed into a new month, deliver the prior season's rewards via an
+    # ephemeral announcement, then continue with the user's command.
+    user_id = str(event.get("user_id") or "")
+    if user_id:
+        try:
+            rollover = ranks_engine.ensure_season_current(ctx, user_id)
+        except Exception as e:
+            ctx.log(f"season rollover failed: {e!r}", level="error")
+            rollover = None
+        if rollover is not None:
+            name = event.get("user_name") or "Maid"
+            try:
+                ctx.interaction.followup(
+                    embeds=[ui_embeds.season_rollover_embed(rollover, name)],
+                    ephemeral=True,
+                )
+            except Exception:
+                # If followup isn't allowed pre-respond (some interaction
+                # states), the next subcommand response will be the user's
+                # only message — rewards are still credited.
+                pass
 
     opts = event.get("command_options") or []
     sub = (opts[0].get("name") if opts else "") or ""

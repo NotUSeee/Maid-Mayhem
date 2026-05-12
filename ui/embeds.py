@@ -11,6 +11,7 @@ from data import chaos as chaos_data
 from data import elements as elements_data
 from data import maids as maids_data
 from data import packs as packs_data
+from data import ranks as ranks_data
 from data import rarities as rarities_data
 from data import rooms as rooms_data
 from data import tools as tools_data
@@ -136,6 +137,61 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
         "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
+    }
+
+
+def rank_embed(state: dict[str, Any], display_name: str) -> dict[str, Any]:
+    """Show current season, rank, RP, and progress to the next tier."""
+    from engine import ranks as ranks_engine
+    rp = int(state.get("rp", 0))
+    rank = ranks_engine.current_rank(rp)
+    nxt = ranks_engine.next_rank(rp)
+    into, span, pct = ranks_engine.progress_to_next(rp)
+    bar_w = 20
+    filled = max(0, min(bar_w, round(pct / 100 * bar_w)))
+    bar = "█" * filled + "░" * (bar_w - filled)
+
+    if nxt is None:
+        progress_line = f"`{bar}` — Top of the ladder."
+    else:
+        progress_line = f"`{bar}` {into}/{span} RP to **{nxt.name}**"
+
+    peak = ranks_data.BY_ID.get(state.get("peak_rank", "dust_bunny"))
+    career = ranks_data.BY_ID.get(state.get("career_peak", "dust_bunny"))
+    fields = [
+        {"name": "Season RP", "value": f"**{rp}**\n{progress_line}", "inline": False},
+        {"name": "Season peak", "value": f"{peak.emoji} {peak.name}" if peak else "—", "inline": True},
+        {"name": "Career peak", "value": f"{career.emoji} {career.name}" if career else "—", "inline": True},
+        {"name": "Season",      "value": state.get("season", "—"),                           "inline": True},
+    ]
+    return {
+        "title": f"{rank.emoji} {display_name} — {rank.name}",
+        "color": rank.color,
+        "fields": fields,
+        "footer": {"text": "RP resets on the 1st of every month. End-of-season rewards land on your next /maid command."},
+    }
+
+
+def season_rollover_embed(summary: dict[str, Any], display_name: str) -> dict[str, Any]:
+    """Shown on the user's first interaction of a new season."""
+    peak = ranks_data.BY_ID.get(summary.get("prior_peak", "dust_bunny"))
+    peak_str = f"{peak.emoji} {peak.name}" if peak else summary.get("prior_peak", "?")
+    lines = [f"Season **{summary.get('prior_season', '?')}** ended at {peak_str}."]
+    coins = int(summary.get("coins", 0))
+    if coins:
+        lines.append(f"  \U0001FA99 +{coins} coins")
+    polished = int(summary.get("polished_packs", 0))
+    if polished:
+        lines.append(f"  \U0001F4E6 {polished}× Polished Pack opened")
+    royal = int(summary.get("royal_packs", 0))
+    if royal:
+        lines.append(f"  \U0001F451 {royal}× Royal Service Pack opened")
+    if summary.get("guaranteed_mythic"):
+        lines.append("  ❤️‍\U0001F525 Bonus: 1 guaranteed Mythic card")
+    return {
+        "title": "\U0001F389 Season ended — rewards delivered",
+        "description": "\n".join(lines) + "\n\nUse `/maid cards` to see the new arrivals.",
+        "color": 0xCA8A04,
     }
 
 

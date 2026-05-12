@@ -5,6 +5,7 @@ from mmo_maid_sdk import Context
 
 from engine import drops
 from engine import manor as manor_engine
+from engine import ranks as ranks_engine
 from store import sql as store_sql
 from ui import embeds
 
@@ -38,6 +39,9 @@ def run(ctx: Context, event: dict) -> None:
     # Garden bonus: each level trims 10 min off the cooldown, min 1 minute.
     cooldown_s = manor_engine.daily_cooldown_for_user(ctx, user_id, _DAILY_TTL_S)
     ctx.ephemeral.cooldown_set(f"{_DAILY_KEY}:{user_id}", ttl_seconds=cooldown_s)
+
+    # Award rank points for showing up.
+    ranks_engine.award_rp(ctx, user_id, 5)
 
     embed = embeds.daily_pack_embed(pack)
     ctx.interaction.respond(embeds=[embed], ephemeral=False)
