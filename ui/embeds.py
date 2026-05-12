@@ -138,6 +138,81 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
     }
 
 
+def duel_challenge_embed(
+    challenger_id: str, challenger_name: str,
+    target_id: str, target_name: str,
+    *, expires_in_s: int,
+) -> dict[str, Any]:
+    return {
+        "title": "⚔ Duel Challenge",
+        "description": (
+            f"**{challenger_name}** has challenged **{target_name}** to a Maid & Mayhem duel.\n\n"
+            f"<@{target_id}> — click **Accept** to begin, or **Decline** to refuse.\n"
+            f"_Expires in {expires_in_s}s._"
+        ),
+        "color": 0xCA8A04,
+    }
+
+
+def _duel_team_block(side: dict[str, Any]) -> str:
+    units = side.get("team") or []
+    parts = []
+    for i, u in enumerate(units):
+        name = u.get("name", "?")
+        cur = max(0, int(u.get("poise", 0)))
+        mx  = max(1, int(u.get("max_poise", cur)))
+        bar = _hp_bar(cur, mx)
+        line = f"`{i + 1}` **{name}** {bar} {cur}/{mx}"
+        if cur <= 0:
+            line = f"~~{line}~~  💀"
+        parts.append(line)
+    return "\n".join(parts) or "_(empty)_"
+
+
+def duel_embed(state: dict[str, Any]) -> dict[str, Any]:
+    a = state["a"]; b = state["b"]
+    turn_owner = state.get("turn_owner")
+    active_name = a["user_name"] if turn_owner == "a" else b["user_name"]
+    log_lines = state.get("log") or []
+    log_text = "\n".join(f"• {line}" for line in log_lines[-6:]) or "_The duel begins._"
+    title = f"⚔ Duel — Round {state.get('turn', 1)} — {active_name}'s turn"
+    return {
+        "title": title,
+        "color": 0xDC2626,
+        "fields": [
+            {"name": f"{a['user_name']}", "value": _duel_team_block(a), "inline": False},
+            {"name": f"{b['user_name']}", "value": _duel_team_block(b), "inline": False},
+            {"name": "Log",               "value": log_text,            "inline": False},
+        ],
+        "footer": {"text": f"Only {active_name} can act this turn."},
+    }
+
+
+def duel_result_embed(state: dict[str, Any]) -> dict[str, Any]:
+    result = state.get("result", "")
+    a = state["a"]; b = state["b"]
+    if result == "a_wins":
+        title = f"🏆 {a['user_name']} wins!"
+        color = 0x22C55E
+    elif result == "b_wins":
+        title = f"🏆 {b['user_name']} wins!"
+        color = 0x22C55E
+    elif result == "a_fled":
+        title = f"🏳 {a['user_name']} fled — {b['user_name']} wins by forfeit."
+        color = 0x6B7280
+    elif result == "b_fled":
+        title = f"🏳 {b['user_name']} fled — {a['user_name']} wins by forfeit."
+        color = 0x6B7280
+    else:
+        title = "Duel ended."
+        color = 0x6B7280
+    return {
+        "title": title,
+        "color": color,
+        "description": "Rewards have been credited. Check `/maid profile`.",
+    }
+
+
 def fusion_menu_embed(totals_by_rarity: dict[str, int]) -> dict[str, Any]:
     """Show every fusable tier, with current owned count and recipe cost."""
     from data import fusion as fusion_data
