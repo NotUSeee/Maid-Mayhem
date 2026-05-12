@@ -36,6 +36,7 @@ from typing import Any
 from data import chaos as chaos_data
 from data import maids as maids_data
 from data import tools as tools_data
+from engine import abilities as abilities_engine
 from engine import damage as damage_engine
 
 
@@ -61,6 +62,8 @@ def _maid_unit(maid_id: str, tool_id: str = "") -> dict[str, Any] | None:
         "cp": cp, "charm": charm, "speed": speed,
         "poise": poise, "max_poise": poise,
         "tool_id": tool_id,
+        "ability_id": m.ability_id,
+        "ability_name": m.ability_name,
     }
 
 
@@ -120,6 +123,9 @@ def start_battle(
         "defending": False,
         "player_team": player_team,
         "enemy_team": enemy_team,
+        # Per-maid ability cooldown counters, parallel to player_team.
+        # 0 = ready; decrements by 1 each round after the player phase.
+        "ability_cooldowns": [0 for _ in player_team],
         "log": [f"You face: {', '.join(u['name'] for u in enemy_team)}."],
         "rewards": {"coins": 0, "xp": 0},
         "result": None,
@@ -149,6 +155,36 @@ def _check_terminal(state: dict[str, Any]) -> str | None:
     return None
 
 
+def _basic_attack_team(
+    player: list[dict[str, Any]],
+    enemies: list[dict[str, Any]],
+    log: list[str],
+    r: random.Random,
+    *,
+    skip_idx: int | None = None,
+) -> None:
+    """Each living player maid takes one basic attack against the lowest-poise
+    living enemy. Mutates ``enemies`` and ``log`` in place.
+    """
+    for i, m in enumerate(player):
+        if i == skip_idx:
+            continue
+        if int(m.get("poise", 0)) <= 0:
+            continue
+        t_idx = _pick_target(enemies, r)
+        if t_idx is None:
+            break
+        target = enemies[t_idx]
+        dmg = damage_engine.attack_damage(
+            int(m["cp"]), str(m.get("element", "")),
+            str(target.get("element", "")), rng=r,
+        )
+        target["poise"] = max(0, int(target["poise"]) - dmg)
+        log.append(f"{m['name']} hits {target['name']} for {dmg}.")
+        if target["poise"] == 0:
+            log.append(f"{target['name']} is cleaned up.")
+
+
 def take_turn(
     state: dict[str, Any],
     action: str,
@@ -157,7 +193,11 @@ def take_turn(
 ) -> dict[str, Any]:
     """Apply one full round (player phase + enemy phase) and return new state.
 
-    `action` is one of "attack", "defend", "flee".
+    ``action`` is one of:
+      - "attack"        whole team basic-attacks
+      - "defend"        no attacks; halve damage taken this round
+      - "flee"          end battle, minimal rewards
+      - "ability:N"     player maid N uses their ability; others basic-attack
     """
     r = rng or random
     if state.get("result"):
@@ -166,34 +206,58 @@ def take_turn(
     log: list[str] = list(state.get("log") or [])
     player = list(state["player_team"])
     enemies = list(state["enemy_team"])
+    cooldowns = list(state.get("ability_cooldowns") or [0] * len(player))
+    # Pad cooldowns if state predates the field (defensive).
+    while len(cooldowns) < len(player):
+        cooldowns.append(0)
 
     if action == "flee":
         log.append("You flee the battle.")
-        new_state = {**state, "log": log[-12:], "result": "flee",
-                     "rewards": {"coins": 0, "xp": 5}}
-        return new_state
+        return {**state, "log": log[-12:], "result": "flee",
+                "rewards": {"coins": 0, "xp": 5}}
 
     defending = (action == "defend")
     if defending:
         log.append("Your maids brace for impact (incoming damage halved).")
 
     # ── Player phase ────────────────────────────────────────────────────────
-    if action == "attack":
-        for i, m in enumerate(player):
-            if int(m.get("poise", 0)) <= 0:
-                continue
-            t_idx = _pick_target(enemies, r)
-            if t_idx is None:
-                break
-            target = enemies[t_idx]
-            dmg = damage_engine.attack_damage(
-                int(m["cp"]), str(m.get("element", "")),
-                str(target.get("element", "")), rng=r,
-            )
-            target["poise"] = max(0, int(target["poise"]) - dmg)
-            log.append(f"{m['name']} hits {target['name']} for {dmg}.")
-            if target["poise"] == 0:
-                log.append(f"{target['name']} is cleaned up.")
+    ability_maid_idx: int | None = None
+    if action.startswith("ability:"):
+        try:
+            ability_maid_idx = int(action.split(":", 1)[1])
+        except ValueError:
+            ability_maid_idx = None
+
+    if ability_maid_idx is not None:
+        # Validate the ability use; fall back to basic attack on any issue
+        # so the player doesn't lose their turn to bad input.
+        valid = (
+            0 <= ability_maid_idx < len(player)
+            and int(player[ability_maid_idx].get("poise", 0)) > 0
+            and cooldowns[ability_maid_idx] == 0
+        )
+        if not valid:
+            log.append("(Ability unavailable — attacking instead.)")
+            _basic_attack_team(player, enemies, log, r)
+        else:
+            m = player[ability_maid_idx]
+            ability = abilities_engine.get(str(m.get("ability_id", "")))
+            if ability is None:
+                log.append(f"{m['name']} has no recorded ability — attacking instead.")
+                _basic_attack_team(player, enemies, log, r)
+            else:
+                ability_state = {"player_team": player, "enemy_team": enemies}
+                ability_lines = ability.apply(ability_state, ability_maid_idx, r)
+                log.extend(ability_lines)
+                cooldowns[ability_maid_idx] = int(ability.cooldown)
+                # Other maids still get their basic attack this round.
+                _basic_attack_team(player, enemies, log, r,
+                                   skip_idx=ability_maid_idx)
+    elif action == "attack":
+        _basic_attack_team(player, enemies, log, r)
+
+    # Decrement cooldowns once per round (they were "spent" on this turn).
+    next_cooldowns = [max(0, c - 1) for c in cooldowns]
 
     # Check victory before enemy phase
     if not _alive(enemies):
@@ -205,6 +269,7 @@ def take_turn(
             "defending": False,
             "player_team": player,
             "enemy_team": enemies,
+            "ability_cooldowns": next_cooldowns,
             "log": log[-12:],
             "rewards": {"coins": coins, "xp": xp},
             "result": "win",
@@ -241,6 +306,7 @@ def take_turn(
         "defending": False,
         "player_team": player,
         "enemy_team": enemies,
+        "ability_cooldowns": next_cooldowns,
         "log": log[-12:],
         "rewards": rewards,
         "result": result,

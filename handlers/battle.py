@@ -11,22 +11,56 @@ from typing import Any
 
 from mmo_maid_sdk import ActionRow, Button, Context
 
+from engine import abilities as abilities_engine
 from engine import battle as battle_engine
 from store import battle_state, kv, sql as store_sql
 from ui import embeds
 
 
-def _action_row(state: dict[str, Any]) -> ActionRow:
-    """Three-button row for the player's options."""
-    disabled = state.get("result") is not None
-    return ActionRow(
+def _action_rows(state: dict[str, Any]) -> list[ActionRow]:
+    """Two rows: main actions + per-maid ability buttons."""
+    terminal = state.get("result") is not None
+    main = ActionRow(
         Button("⚔ Attack", custom_id="mm:battle:attack",
-               style="danger", disabled=disabled),
+               style="danger", disabled=terminal),
         Button("🛡 Defend", custom_id="mm:battle:defend",
-               style="primary", disabled=disabled),
+               style="primary", disabled=terminal),
         Button("🏃 Flee",   custom_id="mm:battle:flee",
-               style="secondary", disabled=disabled),
+               style="secondary", disabled=terminal),
     )
+
+    # One ability button per player maid slot. Disabled when the maid is
+    # KO'd, the ability is on cooldown, or the battle has ended.
+    player = state.get("player_team") or []
+    cooldowns = state.get("ability_cooldowns") or [0] * len(player)
+    ability_buttons: list[Button] = []
+    for i, m in enumerate(player):
+        ability = abilities_engine.get(str(m.get("ability_id", "")))
+        cd = int(cooldowns[i]) if i < len(cooldowns) else 0
+        alive = int(m.get("poise", 0)) > 0
+        if ability is None:
+            label = f"M{i + 1}: —"
+            disabled = True
+        elif not alive:
+            label = f"M{i + 1}: KO"
+            disabled = True
+        elif cd > 0:
+            label = f"M{i + 1}: {ability.name} ({cd})"
+            disabled = True
+        else:
+            label = f"M{i + 1}: {ability.name}"
+            disabled = terminal
+        ability_buttons.append(Button(
+            label[:80],
+            custom_id=f"mm:battle:ability:{i}",
+            style="success",
+            disabled=disabled,
+        ))
+
+    rows: list[ActionRow] = [main]
+    if ability_buttons:
+        rows.append(ActionRow(*ability_buttons))
+    return rows
 
 
 def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any] | None:
@@ -86,7 +120,7 @@ def run(ctx: Context, event: dict) -> None:
     battle_state.save(ctx, user_id, state)
     ctx.interaction.respond(
         embeds=[embeds.battle_embed(state)],
-        components=[_action_row(state)],
+        components=_action_rows(state),
         ephemeral=True,
     )
 
@@ -94,9 +128,21 @@ def run(ctx: Context, event: dict) -> None:
 def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
     if not tail:
         return
-    action = tail[0]
-    if action not in ("attack", "defend", "flee"):
+    head = tail[0]
+
+    # Resolve the engine-level action string from the button's custom_id tail.
+    # Buttons use "mm:battle:attack" | "defend" | "flee" | "ability:<idx>".
+    if head == "ability" and len(tail) >= 2:
+        try:
+            int(tail[1])
+        except ValueError:
+            return
+        action = f"ability:{tail[1]}"
+    elif head in ("attack", "defend", "flee"):
+        action = head
+    else:
         return
+
     user_id = str(event.get("user_id") or "")
     state = battle_state.load(ctx, user_id)
     if not state or state.get("result"):
@@ -106,7 +152,7 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
         )
         return
 
-    # Drop accidental double-clicks within 1.5s
+    # Drop accidental double-clicks within ~2s
     if not ctx.ephemeral.dedup(f"mm:battle:click:{user_id}:{state['turn']}:{action}",
                                 ttl_seconds=2):
         return
@@ -125,6 +171,6 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
     battle_state.save(ctx, user_id, new_state)
     ctx.interaction.respond(
         embeds=[embeds.battle_embed(new_state)],
-        components=[_action_row(new_state)],
+        components=_action_rows(new_state),
         ephemeral=True,
     )
