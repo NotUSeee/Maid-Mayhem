@@ -1,0 +1,32 @@
+# Python bytecode + caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Build / package artifacts (we zip-upload via the dev portal, not from git)
+*.zip
+build/
+dist/
+*.egg-info/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+
+# OS detritus
+.DS_Store
+Thumbs.db
+
+# Claude workspace state (per-machine, not source)
+.claude/
+
+# Local secrets if any ever land here
+.env
+.env.*
+!.env.example
