@@ -26,6 +26,7 @@ from typing import Any
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from engine import abilities as abilities_engine
+from engine import achievements as ach_engine
 from engine import manor as manor_engine
 from engine import pvp as pvp_engine
 from engine import quests as quests_engine
@@ -140,6 +141,10 @@ def _award_and_log(ctx: Context, state: dict[str, Any]) -> None:
 
     # Quest counter — only counted on a true win, not a forfeit-by-flee.
     quests_engine.bump(ctx, winner["user_id"], "pvp_win")
+
+    # Achievements (winner only).
+    winner_unlocks = ach_engine.bump(ctx, winner["user_id"], "pvp_win")
+    state.setdefault("_ach_unlocks", {})[winner["user_id"]] = winner_unlocks
 
     # Card XP for everyone who fought. PvP pays more than PvE.
     win_deck = kv.load_deck(ctx, winner["user_id"])
@@ -350,9 +355,17 @@ def _handle_turn(ctx: Context, event: dict, clicker_id: str, engine_action: str)
         duel_state.clear_active_for(ctx, new_state["a"]["user_id"])
         duel_state.clear_active_for(ctx, new_state["b"]["user_id"])
         duel_state.clear(ctx, duel_id)
+        out = [embeds.duel_embed(new_state), embeds.duel_result_embed(new_state)]
+        # Concat any achievement unlocks across both sides.
+        unlocks_map = new_state.get("_ach_unlocks") or {}
+        flat: list[str] = []
+        for uid in (new_state["a"]["user_id"], new_state["b"]["user_id"]):
+            flat.extend(unlocks_map.get(uid) or [])
+        if flat:
+            out.append(embeds.achievement_unlock_embed(flat))
         ctx.interaction.respond(
             content=f"<@{new_state['a']['user_id']}> <@{new_state['b']['user_id']}>",
-            embeds=[embeds.duel_embed(new_state), embeds.duel_result_embed(new_state)],
+            embeds=out,
             components=[],
             ephemeral=False,
         )

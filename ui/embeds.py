@@ -171,6 +171,75 @@ def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left:
     }
 
 
+def achievements_embed(state: dict[str, Any]) -> dict[str, Any]:
+    from data import achievements as ach_data
+    unlocked = set(state.get("unlocked") or [])
+    counters = state.get("counters") or {}
+
+    fields = []
+    total = len(ach_data.ALL)
+    got = sum(1 for a in ach_data.ALL if a.id in unlocked)
+
+    for cat in ach_data.CATEGORIES:
+        items = ach_data.by_category(cat)
+        if not items:
+            continue
+        lines = []
+        for a in items:
+            mark = "✅" if a.id in unlocked else "▫️"
+            prog = int(counters.get(a.counter, 0))
+            target = int(a.target)
+            if a.id in unlocked:
+                prog_text = "**unlocked**"
+            else:
+                prog_text = f"{min(prog, target)}/{target}"
+            reward = f"\U0001FA99 +{a.reward_coins}"
+            if a.reward_xp:     reward += f" · ✨+{a.reward_xp}xp"
+            if a.reward_polish: reward += f" · ✨P+{a.reward_polish}"
+            lines.append(f"{mark} **{a.name}** — {a.description}\n  {prog_text}  ·  {reward}")
+        fields.append({
+            "name":  ach_data.CATEGORY_LABELS.get(cat, cat),
+            "value": "\n".join(lines),
+            "inline": False,
+        })
+
+    return {
+        "title": f"\U0001F3C5 Achievements — {got}/{total} unlocked",
+        "color": 0xCA8A04 if got == total else 0x6366F1,
+        "description": (
+            "Each one is permanent and credits its reward the moment you hit the target. "
+            "Some counters update automatically from your battles, raids, and shop activity."
+        ),
+        "fields": fields,
+    }
+
+
+def achievement_unlock_embed(unlocked_ids: list[str]) -> dict[str, Any]:
+    """Shown in-line when a player just earned one or more achievements."""
+    from data import achievements as ach_data
+    if not unlocked_ids:
+        return {}
+    lines = []
+    total_coins = total_xp = total_polish = 0
+    for aid in unlocked_ids:
+        a = ach_data.BY_ID.get(aid)
+        if not a:
+            continue
+        bits = [f"\U0001FA99 +{a.reward_coins}"]
+        if a.reward_xp:     bits.append(f"✨+{a.reward_xp}xp")
+        if a.reward_polish: bits.append(f"✨P+{a.reward_polish}")
+        lines.append(f"🏅 **{a.name}** — {a.description}\n   _{'  '.join(bits)}_")
+        total_coins += a.reward_coins
+        total_xp     += a.reward_xp
+        total_polish += a.reward_polish
+    return {
+        "title": "🏅 Achievement unlocked!" if len(unlocked_ids) == 1 else f"🏅 {len(unlocked_ids)} achievements unlocked!",
+        "color": 0xF59E0B,
+        "description": "\n\n".join(lines),
+        "footer": {"text": "Rewards already credited — check /maid profile."},
+    }
+
+
 def quests_embed(state: dict[str, Any]) -> dict[str, Any]:
     from data import quests as quests_data
 

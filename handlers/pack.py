@@ -13,6 +13,8 @@ from __future__ import annotations
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from data import packs as packs_data
+from data import maids as maids_data
+from engine import achievements as ach_engine
 from engine import drops
 from engine import quests as quests_engine
 from store import kv, sql as store_sql
@@ -79,7 +81,30 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
 
     quests_engine.bump(ctx, user_id, "pack_open")
 
-    ctx.interaction.respond(
-        embeds=[embeds.pack_reveal_embed(pack.id, pulls, coins_left=profile["coins"])],
-        ephemeral=False,
+    # Achievements: pack_buy + detect any Mythic pull this pack.
+    unlocks = list(ach_engine.bump(ctx, user_id, "pack_buy"))
+    pulled_mythic = any(
+        ct == "maid" and (maids_data.BY_ID.get(cid) and maids_data.BY_ID[cid].rarity == "mythic")
+        for ct, cid in pulls
     )
+    if pulled_mythic:
+        unlocks.extend(ach_engine.bump(ctx, user_id, "mythic_owned"))
+    # Refresh unique-card count for the collection achievements.
+    unlocks.extend(_recount_unique(ctx, user_id))
+
+    out = [embeds.pack_reveal_embed(pack.id, pulls, coins_left=profile["coins"])]
+    if unlocks:
+        out.append(embeds.achievement_unlock_embed(unlocks))
+    ctx.interaction.respond(embeds=out, ephemeral=False)
+
+
+def _recount_unique(ctx, user_id: str) -> list[str]:
+    try:
+        row = ctx.sql.query_one(
+            "SELECT COUNT(*) AS n FROM mm_inventory WHERE user_id=%s AND count > 0",
+            [user_id],
+        )
+        n = int((row or {}).get("n", 0))
+    except Exception:
+        return []
+    return ach_engine.set_counter(ctx, user_id, "unique_owned", n)

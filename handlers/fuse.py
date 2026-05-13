@@ -18,7 +18,9 @@ from __future__ import annotations
 from mmo_maid_sdk import ActionRow, Button, Context, SelectMenu, SelectOption
 
 from data import fusion as fusion_data
+from data import maids as maids_data
 from data import rarities as rarities_data
+from engine import achievements as ach_engine
 from engine import fusion as fusion_engine
 from engine import quests as quests_engine
 from store import sql as store_sql
@@ -154,8 +156,27 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
 
         quests_engine.bump(ctx, user_id, "card_fuse")
 
-        ctx.interaction.respond(
-            embeds=[embeds.fusion_result_embed(plan, result_type, result_id)],
-            ephemeral=False,
-        )
+        unlocks = list(ach_engine.bump(ctx, user_id, "card_fuse"))
+        if result_type == "maid":
+            m = maids_data.BY_ID.get(result_id)
+            if m and m.rarity == "mythic":
+                unlocks.extend(ach_engine.bump(ctx, user_id, "mythic_owned"))
+        unlocks.extend(_recount_unique(ctx, user_id))
+
+        out = [embeds.fusion_result_embed(plan, result_type, result_id)]
+        if unlocks:
+            out.append(embeds.achievement_unlock_embed(unlocks))
+        ctx.interaction.respond(embeds=out, ephemeral=False)
         return
+
+
+def _recount_unique(ctx, user_id: str) -> list[str]:
+    try:
+        row = ctx.sql.query_one(
+            "SELECT COUNT(*) AS n FROM mm_inventory WHERE user_id=%s AND count > 0",
+            [user_id],
+        )
+        n = int((row or {}).get("n", 0))
+    except Exception:
+        return []
+    return ach_engine.set_counter(ctx, user_id, "unique_owned", n)

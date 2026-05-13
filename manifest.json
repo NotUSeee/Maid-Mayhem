@@ -1,7 +1,7 @@
 {
   "id": "maid_and_mayhem",
   "name": "Maid & Mayhem",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "description": "Collect magical maids, clean up chaos, rule the manor. A collectible Discord card game.",
   "capabilities_requested": [
     "interaction:respond",
@@ -33,6 +33,7 @@
         { "type": 1, "name": "rank",        "description": "Your ranked-season standing and progress." },
         { "type": 1, "name": "cosmetics",   "description": "Buy and equip titles, badges, and profile colors with Polish." },
         { "type": 1, "name": "quests",      "description": "View daily and weekly quests, claim rewards." },
+        { "type": 1, "name": "achievements","description": "Lifetime milestones — auto-unlock as you play." },
         { "type": 1, "name": "profile",     "description": "Show your maid stats and progress." },
         { "type": 1, "name": "leaderboard", "description": "Top players in this server." }
       ]

@@ -12,7 +12,10 @@ from __future__ import annotations
 
 from mmo_maid_sdk import Plugin, Context
 
-from handlers import daily, cards, deck, battle, cosmetics, duel, fuse, manor, pack, profile, quests, raid, rank, leaderboard
+from handlers import (
+    achievements, daily, cards, deck, battle, cosmetics, duel, fuse,
+    manor, pack, profile, quests, raid, rank, leaderboard,
+)
 from engine import ranks as ranks_engine
 from store import sql as store_sql
 from ui import embeds as ui_embeds
@@ -33,6 +36,7 @@ SUBCOMMANDS = {
     "rank":        rank.run,
     "cosmetics":   cosmetics.run,
     "quests":      quests.run,
+    "achievements": achievements.run,
     "profile":     profile.run,
     "leaderboard": leaderboard.run,
 }

@@ -12,6 +12,7 @@ from typing import Any
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from engine import abilities as abilities_engine
+from engine import achievements as ach_engine
 from engine import battle as battle_engine
 from engine import manor as manor_engine
 from engine import quests as quests_engine
@@ -96,7 +97,15 @@ def _finalize_if_terminal(ctx: Context, state: dict[str, Any]) -> dict[str, Any]
         if won:
             ranks_engine.award_rp(ctx, user_id, 5)   # PvE win: +5 RP
             quests_engine.bump(ctx, user_id, "pve_win")
+            newly = ach_engine.bump(ctx, user_id, "pve_win")
+        else:
+            newly = []
         battle_state.clear(ctx, user_id)
+    else:
+        newly = []
+    # Stash unlocks on the state so the caller can render them.
+    if newly:
+        state.setdefault("_ach_unlocks", []).extend(newly)
     return embeds.battle_result_embed(state, won=won, coins=coins, xp=xp, levelups=levelups)
 
 
@@ -178,11 +187,11 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
     final_embed = _finalize_if_terminal(ctx, new_state)
 
     if final_embed is not None:
-        ctx.interaction.respond(
-            embeds=[embeds.battle_embed(new_state), final_embed],
-            components=[],
-            ephemeral=True,
-        )
+        out = [embeds.battle_embed(new_state), final_embed]
+        unlocks = new_state.get("_ach_unlocks") or []
+        if unlocks:
+            out.append(embeds.achievement_unlock_embed(unlocks))
+        ctx.interaction.respond(embeds=out, components=[], ephemeral=True)
         return
 
     battle_state.save(ctx, user_id, new_state)

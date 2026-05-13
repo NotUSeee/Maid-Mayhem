@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from mmo_maid_sdk import Context
 
+from engine import achievements as ach_engine
 from engine import drops
 from engine import manor as manor_engine
 from engine import quests as quests_engine
@@ -48,5 +49,28 @@ def run(ctx: Context, event: dict) -> None:
     # /maid daily counts as a pack-open for quest purposes.
     quests_engine.bump(ctx, user_id, "pack_open")
 
+    # Achievements: daily_claim (Foundation: First Steps)
+    newly = ach_engine.bump(ctx, user_id, "daily_claim")
+    _maybe_announce_collection(ctx, user_id)
+
     embed = embeds.daily_pack_embed(pack)
-    ctx.interaction.respond(embeds=[embed], ephemeral=False)
+    out_embeds = [embed]
+    if newly:
+        out_embeds.append(embeds.achievement_unlock_embed(newly))
+    ctx.interaction.respond(embeds=out_embeds, ephemeral=False)
+
+
+def _maybe_announce_collection(ctx, user_id: str) -> list[str]:
+    """Recount the user's unique-card total and update the collection
+    achievements. Cheap COUNT(DISTINCT) query; runs after every grant.
+    Returns any newly-unlocked IDs (caller decides whether to surface them).
+    """
+    try:
+        row = ctx.sql.query_one(
+            "SELECT COUNT(*) AS n FROM mm_inventory WHERE user_id=%s AND count > 0",
+            [user_id],
+        )
+        n = int((row or {}).get("n", 0))
+    except Exception:
+        return []
+    return ach_engine.set_counter(ctx, user_id, "unique_owned", n)

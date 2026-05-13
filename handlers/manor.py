@@ -9,6 +9,7 @@ from __future__ import annotations
 from mmo_maid_sdk import ActionRow, Context, SelectMenu, SelectOption
 
 from data import rooms as rooms_data
+from engine import achievements as ach_engine
 from store import kv
 from ui import embeds
 
@@ -95,14 +96,29 @@ def on_component(ctx: Context, event: dict, tail: list[str]) -> None:
     kv.save_profile(ctx, user_id, profile)
     kv.save_manor(ctx, user_id, manor)
 
+    # Achievement checks. Three thresholds key off room levels:
+    #   any room reaches 5  -> manor_room_l5  (one-time, max 1)
+    #   any room reaches 10 -> manor_room_l10 (one-time, max 1)
+    #   every room >= 5     -> manor_all_l5   (one-time, max 1)
+    unlocks: list[str] = []
+    if manor[room_id] >= 5:
+        unlocks.extend(ach_engine.set_counter(ctx, user_id, "manor_room_l5", 1))
+    if manor[room_id] >= 10:
+        unlocks.extend(ach_engine.set_counter(ctx, user_id, "manor_room_l10", 1))
+    if all(int(manor.get(r.id, 1)) >= 5 for r in rooms_data.ALL):
+        unlocks.extend(ach_engine.set_counter(ctx, user_id, "manor_all_l5", 1))
+
+    out = [
+        embeds.manor_upgrade_result_embed(
+            room_id, from_level=current, to_level=current + 1,
+            coins_left=profile["coins"],
+        ),
+        embeds.manor_embed(manor, profile["coins"]),
+    ]
+    if unlocks:
+        out.append(embeds.achievement_unlock_embed(unlocks))
     ctx.interaction.respond(
-        embeds=[
-            embeds.manor_upgrade_result_embed(
-                room_id, from_level=current, to_level=current + 1,
-                coins_left=profile["coins"],
-            ),
-            embeds.manor_embed(manor, profile["coins"]),
-        ],
+        embeds=out,
         components=[picker] if (picker := _room_picker(manor, profile["coins"])) is not None else [],
         ephemeral=True,
     )

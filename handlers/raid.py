@@ -18,6 +18,7 @@ from __future__ import annotations
 from mmo_maid_sdk import ActionRow, Button, Context
 
 from data import raid_bosses as bosses_data
+from engine import achievements as ach_engine
 from engine import drops, manor as manor_engine, quests as quests_engine, raid as raid_engine, ranks as ranks_engine
 from data import packs as packs_data
 from store import kv, raid_state, sql as store_sql
@@ -121,6 +122,7 @@ def _do_attack(ctx: Context, event: dict, user_id: str) -> None:
 
     # Quest counter — every raid attack ticks the daily/weekly raid quests.
     quests_engine.bump(ctx, user_id, "raid_attack")
+    raid_unlocks = ach_engine.bump(ctx, user_id, "raid_attack")
 
     attacker_name = event.get("user_name") or "Maid"
     boss = bosses_data.BY_ID.get(state["boss_id"])
@@ -136,7 +138,10 @@ def _do_attack(ctx: Context, event: dict, user_id: str) -> None:
             boss_name=boss_name, attacker_name=attacker_name,
         )
         embed, components = _render(ctx, state)
-        ctx.interaction.respond(embeds=[result, embed], components=components, ephemeral=False)
+        out = [result, embed]
+        if raid_unlocks:
+            out.append(embeds.achievement_unlock_embed(raid_unlocks))
+        ctx.interaction.respond(embeds=out, components=components, ephemeral=False)
         return
 
     # ── Boss killed: distribute rewards, spawn the next one ────────────────
@@ -156,19 +161,18 @@ def _do_attack(ctx: Context, event: dict, user_id: str) -> None:
 
     summary = embeds.raid_reward_summary_embed(boss_name, rewards, names)
     next_embed, next_components = _render(ctx, new_state)
-    ctx.interaction.respond(
-        embeds=[
-            embeds.raid_attack_result_embed(
-                damage=dmg, killed=True,
-                hp_left=0, max_hp=int(state["max_hp"]),
-                boss_name=boss_name, attacker_name=attacker_name,
-            ),
-            summary,
-            next_embed,
-        ],
-        components=next_components,
-        ephemeral=False,
-    )
+    out_embeds = [
+        embeds.raid_attack_result_embed(
+            damage=dmg, killed=True,
+            hp_left=0, max_hp=int(state["max_hp"]),
+            boss_name=boss_name, attacker_name=attacker_name,
+        ),
+        summary,
+        next_embed,
+    ]
+    if raid_unlocks:
+        out_embeds.append(embeds.achievement_unlock_embed(raid_unlocks))
+    ctx.interaction.respond(embeds=out_embeds, components=next_components, ephemeral=False)
 
 
 def _credit_rewards(ctx: Context, rewards: dict[str, dict]) -> None:

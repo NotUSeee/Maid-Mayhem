@@ -11,6 +11,7 @@ from typing import Any
 from mmo_maid_sdk import ActionRow, Context, SelectMenu, SelectOption
 
 from data import cosmetics as cosmetics_data
+from engine import achievements as ach_engine
 from store import kv
 from ui import embeds
 
@@ -138,10 +139,12 @@ def _do_buy(ctx: Context, user_id: str, cosmetic) -> None:
     kv.save_profile(ctx, user_id, profile)
     kv.save_cosmetics(ctx, user_id, cosmetics)
 
-    ctx.interaction.respond(
-        embeds=[embeds.cosmetic_buy_result_embed(cosmetic, polish_left=profile["polish"])],
-        ephemeral=True,
-    )
+    # Achievement: cosmetic_buy (Maid of Style)
+    unlocks = ach_engine.bump(ctx, user_id, "cosmetic_buy")
+    out = [embeds.cosmetic_buy_result_embed(cosmetic, polish_left=profile["polish"])]
+    if unlocks:
+        out.append(embeds.achievement_unlock_embed(unlocks))
+    ctx.interaction.respond(embeds=out, ephemeral=True)
 
 
 def _do_equip(ctx: Context, user_id: str, cosmetic) -> None:
