@@ -105,6 +105,47 @@ def maid_card_embed(maid_id: str, *, owned_count: int | None = None, level: int 
     }
 
 
+def chaos_card_embed(chaos_id: str) -> dict[str, Any]:
+    c = chaos_data.BY_ID.get(chaos_id)
+    if not c:
+        return {"title": "Unknown chaos enemy", "description": f"`{chaos_id}`", "color": 0x6B7280}
+    e = elements_data.BY_ID.get(c.element)
+    title = f"\U0001F47E {c.name}"
+    subtitle_bits = [f"**Chaos · Tier {c.tier}**"]
+    if e:
+        subtitle_bits.append(f"{e.emoji} {e.label}")
+    desc = " · ".join(subtitle_bits)
+    fields = [
+        {"name": "Poise",        "value": f"\U0001F6E1 {c.poise}",       "inline": True},
+        {"name": "Clean Power",  "value": f"\U0001F9F9 {c.clean_power}", "inline": True},
+        {"name": "Speed",        "value": f"⚡ {c.speed}",        "inline": True},
+        {"name": c.ability_name, "value": c.ability_text,                 "inline": False},
+    ]
+    return {
+        "title": title,
+        "description": desc + (f"\n\n_{c.flavor}_" if c.flavor else ""),
+        "color": (e.color if e else 0x6B7280),
+        "fields": fields,
+    }
+
+
+def raid_boss_card_embed(boss_id: str) -> dict[str, Any]:
+    b = raid_bosses_data.BY_ID.get(boss_id)
+    if not b:
+        return {"title": "Unknown raid boss", "description": f"`{boss_id}`", "color": 0x6B7280}
+    e = elements_data.BY_ID.get(b.element)
+    title = f"{b.emoji} {b.name}"
+    bits = [f"**Raid Boss · Tier {b.tier}**"]
+    if e:
+        bits.append(f"{e.emoji} {e.label}")
+    desc = " · ".join(bits)
+    return {
+        "title": title,
+        "description": desc + f"\n\n**HP:** {b.hp:,}" + (f"\n\n_{b.flavor}_" if b.flavor else ""),
+        "color": 0xDC2626,
+    }
+
+
 def tool_card_embed(tool_id: str, *, owned_count: int | None = None) -> dict[str, Any]:
     t = tools_data.BY_ID.get(tool_id)
     if not t:

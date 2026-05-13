@@ -13,8 +13,8 @@ from __future__ import annotations
 from mmo_maid_sdk import Plugin, Context
 
 from handlers import (
-    achievements, daily, cards, deck, battle, cosmetics, duel, fuse,
-    manor, pack, profile, quests, raid, rank, leaderboard,
+    achievements, daily, card_detail, cards, deck, battle, cosmetics, duel,
+    fuse, manor, pack, profile, quests, raid, rank, leaderboard,
 )
 from engine import ranks as ranks_engine
 from store import sql as store_sql
@@ -25,6 +25,7 @@ plugin = Plugin()
 
 SUBCOMMANDS = {
     "daily":       daily.run,
+    "card":        card_detail.run,
     "cards":       cards.run,
     "deck":        deck.run,
     "battle":      battle.run,

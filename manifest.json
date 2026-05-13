@@ -1,7 +1,7 @@
 {
   "id": "maid_and_mayhem",
   "name": "Maid & Mayhem",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "Collect magical maids, clean up chaos, rule the manor. A collectible Discord card game.",
   "capabilities_requested": [
     "interaction:respond",
@@ -15,6 +15,14 @@
       "description": "Maid & Mayhem commands.",
       "options": [
         { "type": 1, "name": "daily",       "description": "Claim your daily Dust Pack (3 cards)." },
+        {
+          "type": 1,
+          "name": "card",
+          "description": "Look up a specific card by name.",
+          "options": [
+            { "type": 3, "name": "name", "description": "Card name or partial name", "required": true }
+          ]
+        },
         { "type": 1, "name": "cards",       "description": "View your card collection." },
         { "type": 1, "name": "deck",        "description": "View or edit your battle deck." },
         { "type": 1, "name": "battle",      "description": "Start a PvE battle against chaos." },
