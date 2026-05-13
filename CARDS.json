@@ -1,0 +1,491 @@
+{
+  "version": "0.12.0",
+  "plugin_id": "maid_and_mayhem",
+  "style_guide": "Anime-influenced semi-realistic illustration. Clean cel-shaded linework, soft painted gradients, vertical card-art composition. Subject centered with the background fading to a soft glow in their element's color. Maid uniforms are variations on the classic black-and-white frilly base with element-themed accents and trim. Mood is cute, competitive, and a little ridiculous — confident expressions, not blank or generic. Lighting matches the element (warm flame for Fire, cool moonlight for Moon, etc.). When prompting an AI generator, prepend this paragraph to each card's `visual` field.",
+  "rarities": [
+    { "id": "common",    "label": "Common",    "color": "#9CA3AF", "drop_pct": 55.0 },
+    { "id": "uncommon",  "label": "Uncommon",  "color": "#22C55E", "drop_pct": 25.0 },
+    { "id": "rare",      "label": "Rare",      "color": "#3B82F6", "drop_pct": 12.0 },
+    { "id": "epic",      "label": "Epic",      "color": "#A855F7", "drop_pct":  6.0 },
+    { "id": "legendary", "label": "Legendary", "color": "#F59E0B", "drop_pct":  1.8 },
+    { "id": "mythic",    "label": "Mythic",    "color": "#EF4444", "drop_pct":  0.2 }
+  ],
+  "elements": [
+    { "id": "light",     "label": "Light",     "icon": "🕯",  "color": "#FEF3C7" },
+    { "id": "moon",      "label": "Moon",      "icon": "🌙", "color": "#6366F1" },
+    { "id": "fire",      "label": "Fire",      "icon": "🔥", "color": "#EF4444" },
+    { "id": "frost",     "label": "Frost",     "icon": "❄️", "color": "#60A5FA" },
+    { "id": "garden",    "label": "Garden",    "icon": "🌿", "color": "#16A34A" },
+    { "id": "clockwork", "label": "Clockwork", "icon": "⚙️", "color": "#B45309" },
+    { "id": "royal",     "label": "Royal",     "icon": "👑", "color": "#CA8A04" },
+    { "id": "shadow",    "label": "Shadow",    "icon": "🕸",  "color": "#4B5563" }
+  ],
+  "element_triangle_note": "Each element beats the next in this ring: Fire → Frost → Garden → Shadow → Light → Moon → Royal → Clockwork → Fire. A matchup against the element you beat does 1.5× damage; against the one that beats you, 0.75×.",
+
+  "maids": [
+    {
+      "id": "mina",
+      "name": "Mina, Starter Maid",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "light", "element_color": "#FEF3C7",
+      "role": "Balanced",
+      "stats": { "clean_power": 3, "poise": 6, "charm": 4, "speed": 5 },
+      "ability": { "name": "Fresh Start", "description": "Heal yourself for 3.", "cooldown": 2 },
+      "flavor": "Her apron is suspiciously stain-resistant.",
+      "visual": "A cheerful young maid with shoulder-length blonde hair and warm brown eyes. Crisp white apron over a soft-cream dress with subtle gold trim. Holds a plain wooden broom resting over one shoulder. Slightly nervous-but-eager smile, round friendly face. Warm sunlit background with faint candle motifs and dust motes catching the light."
+    },
+    {
+      "id": "dusty",
+      "name": "Dusty, Apprentice Tinker",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "clockwork", "element_color": "#B45309",
+      "role": "Utility",
+      "stats": { "clean_power": 3, "poise": 5, "charm": 5, "speed": 5 },
+      "ability": { "name": "Spring-Loaded", "description": "Permanently gain +2 Speed this battle.", "cooldown": 3 },
+      "flavor": "Built entirely from forgotten cuckoo clocks.",
+      "visual": "A wiry brown-haired maid with messy braids, brass-rimmed goggles pushed up on her forehead, and a small oil smudge on one cheek. Brass-and-leather apron over a grey workshop dress. Pockets bristling with tiny screwdrivers, wind-up keys at her belt. Mid-action with a tool in hand. Workshop-amber background with floating cogs and tiny brass mechanisms."
+    },
+    {
+      "id": "pip",
+      "name": "Pip, Frostling",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "frost", "element_color": "#60A5FA",
+      "role": "Skirmisher",
+      "stats": { "clean_power": 4, "poise": 4, "charm": 3, "speed": 7 },
+      "ability": { "name": "Cold Shoulder", "description": "Reduce an enemy's Clean Power by 2 for 2 turns.", "cooldown": 2 },
+      "flavor": "Carries a feather duster forged from icicles.",
+      "visual": "A petite, fast-looking maid with pale-blue pixie-cut hair and brilliant cyan eyes. Navy-and-ice-white frilled uniform with crystal-shard buttons. Holds an oversized feather duster whose fibers are actual glittering icicles. A small puff of cold breath drifts from her smirking mouth. Pale-blue background with drifting snow and faint frost-rune patterns."
+    },
+    {
+      "id": "wren",
+      "name": "Wren, Garden Helper",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "garden", "element_color": "#16A34A",
+      "role": "Healer",
+      "stats": { "clean_power": 2, "poise": 7, "charm": 5, "speed": 4 },
+      "ability": { "name": "Sprouting Care", "description": "Heal an ally for 4.", "cooldown": 2 },
+      "flavor": "Talks to the houseplants. They talk back.",
+      "visual": "A soft-eyed maid with leaf-green hair tied in two short braids, tiny sprouts growing from the braids. Moss-green dress with a cream apron criss-crossed with delicate vines. Cradles a small potted plant in one arm; holds a copper watering can in the other. Gentle, focused expression as if mid-conversation with the plant. Sunlit greenhouse background with ferns and hanging flowers."
+    },
+    {
+      "id": "em",
+      "name": "Em, Moonlit Sweep",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "moon", "element_color": "#6366F1",
+      "role": "Debuffer",
+      "stats": { "clean_power": 3, "poise": 5, "charm": 6, "speed": 4 },
+      "ability": { "name": "Hush Hush", "description": "Reduce an enemy's Clean Power by 2 for 2 turns.", "cooldown": 2 },
+      "flavor": "Cleans by moonlight. Strictly.",
+      "visual": "A quiet, watchful maid with long straight violet hair half-covering one eye. Crescent-moon silver earrings. Dark indigo dress with silver thread trim and a moon-pattern apron. Holds an old wooden broom upright. Faintly luminous pale eyes. Deep midnight-blue background with stars and a thin crescent moon."
+    },
+    {
+      "id": "tabby",
+      "name": "Tabby, Hearthside Maid",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "element": "fire", "element_color": "#EF4444",
+      "role": "Attacker",
+      "stats": { "clean_power": 5, "poise": 4, "charm": 3, "speed": 5 },
+      "ability": { "name": "Quick Singe", "description": "Deal 5 damage to the weakest enemy.", "cooldown": 2 },
+      "flavor": "Smells faintly of woodsmoke and tea biscuits.",
+      "visual": "A scrappy auburn-haired maid with bright green eyes and a constellation of freckles, hair pulled into a messy side-ponytail. Copper-and-red apron over a white shirt; the apron's edges are singed brown. A soot smudge on her nose. Wields a long iron fireplace poker like a sword in a ready stance. Confident smirk. Hearthfire-orange glow behind her with leaping flames."
+    },
+    {
+      "id": "sage",
+      "name": "Sage, Herb Witch",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "element": "garden", "element_color": "#16A34A",
+      "role": "Support",
+      "stats": { "clean_power": 3, "poise": 7, "charm": 7, "speed": 5 },
+      "ability": { "name": "Sage Advice", "description": "Heal all allies for 3.", "cooldown": 3 },
+      "flavor": "Her cupboard contains more rosemary than is legal.",
+      "visual": "An olive-skinned maid with dark green hair in a long loose braid, gold-rimmed wireframe glasses. Deep forest-green dress, apron lined with pinned sprigs of rosemary, lavender, and dried sage. Holds a wooden mortar and pestle, mid-grind. Calm, slightly conspiratorial smile. Background: warm-lit apothecary kitchen, hanging bunches of herbs and copper pots."
+    },
+    {
+      "id": "yuki",
+      "name": "Yuki, Snowfall Maid",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "element": "frost", "element_color": "#60A5FA",
+      "role": "Controller",
+      "stats": { "clean_power": 4, "poise": 6, "charm": 6, "speed": 6 },
+      "ability": { "name": "Drifting Hush", "description": "Freeze an enemy for 1 turn (they skip their next attack).", "cooldown": 3 },
+      "flavor": "Snowflakes follow her like loyal pets.",
+      "visual": "A tall maid with very long flowing white hair, pale skin, and luminous ice-blue eyes. Deep blue dress with a delicate snowflake-pattern apron in silver-white. Six perfectly formed snowflakes orbit her outstretched palm. Serene, slightly mysterious smile. Background: a quiet blue snowstorm, soft blurred falling flakes."
+    },
+    {
+      "id": "bram",
+      "name": "Bram, Kitchen Brawler",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "element": "fire", "element_color": "#EF4444",
+      "role": "Attacker",
+      "stats": { "clean_power": 6, "poise": 6, "charm": 4, "speed": 6 },
+      "ability": { "name": "Skillet Swing", "description": "Deal 7 damage to the weakest enemy.", "cooldown": 2 },
+      "flavor": "Yes, the pan is the ability. He just hits things.",
+      "visual": "A broad-shouldered male maid with cropped fiery red hair, friendly squint, soot smudges across his forearms. Black-and-red apron over a white chef's shirt with rolled-up sleeves. Wields an enormous cast-iron skillet like a war-club, mid-swing. Big toothy grin like he's enjoying the fight. Sparks and smoke trailing behind him; backdrop is a roaring kitchen stove."
+    },
+    {
+      "id": "sera",
+      "name": "Sera, Lamplighter",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "element": "light", "element_color": "#FEF3C7",
+      "role": "Cleanser",
+      "stats": { "clean_power": 4, "poise": 7, "charm": 6, "speed": 5 },
+      "ability": { "name": "Steady Flame", "description": "Heal an ally for 4 and cleanse their afflictions.", "cooldown": 2 },
+      "flavor": "Carries an oil lamp that never runs out.",
+      "visual": "A calm gold-haired maid with hair tucked into a high bun, soft amber eyes. Honey-yellow dress with warm-white apron, brass cuff bracelets. Holds up an antique brass oil lamp; the flame inside casts a soft golden halo around her. Gentle, reassuring expression. Twilight cobblestone-street backdrop, blurred lamp-posts behind."
+    },
+    {
+      "id": "cog",
+      "name": "Cog, Cogsworth Junior",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "element": "clockwork", "element_color": "#B45309",
+      "role": "Combo",
+      "stats": { "clean_power": 5, "poise": 6, "charm": 5, "speed": 6 },
+      "ability": { "name": "Wind-Up", "description": "Hit twice for 4 damage each.", "cooldown": 3 },
+      "flavor": "His pockets click softly when he walks.",
+      "visual": "A neat younger male maid with combed brown hair and round wire-frame glasses, polite but focused expression. Crisp brass-buttoned vest over a white shirt and dark trousers, half-apron at his waist. Holds a gold pocket watch in one hand and a small jeweler's screwdriver in the other. Faint clockwork gears float around him in slow rotation. Warm wood-panelled study backdrop."
+    },
+    {
+      "id": "bria",
+      "name": "Bria, Broomblade Captain",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "element": "fire", "element_color": "#EF4444",
+      "role": "Attacker",
+      "stats": { "clean_power": 8, "poise": 7, "charm": 4, "speed": 7 },
+      "ability": { "name": "Sweep Strike", "description": "Deal 7 damage; if it kills, deal 4 to the next enemy.", "cooldown": 3 },
+      "flavor": "Her broom has its own footnotes in the rulebook.",
+      "visual": "A tall, athletic woman with crimson hair pulled into a high disciplined ponytail, sharp gold eyes. Crimson-and-black uniform with gold sergeant's epaulets and a long swallow-tail coat over a maid-apron. Wields a long broom like a polearm, the bristled head glowing with embers. Stand-at-attention pose, slight forward lean. Battle banner and embers swirling in the deep-red background."
+    },
+    {
+      "id": "stella",
+      "name": "Stella, Royal Page",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "element": "royal", "element_color": "#CA8A04",
+      "role": "Buffer",
+      "stats": { "clean_power": 5, "poise": 8, "charm": 7, "speed": 6 },
+      "ability": { "name": "Crown Polish", "description": "Give an ally +2 Clean Power for 2 turns.", "cooldown": 2 },
+      "flavor": "Curtsies before delivering devastating news.",
+      "visual": "A poised blonde-haired maid with hair styled in elegant waves, sharp blue eyes, slight knowing smile. White-and-gold dress with a small embroidered crown insignia on the apron, gold-trimmed lace cuffs. Holds a silk polishing cloth in one hand and a five-branch silver candelabra in the other, mid-curtsy. Royal hall backdrop with chandeliers and red-carpeted marble."
+    },
+    {
+      "id": "drosera",
+      "name": "Drosera, Thornkeeper",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "element": "garden", "element_color": "#16A34A",
+      "role": "Bruiser",
+      "stats": { "clean_power": 6, "poise": 9, "charm": 5, "speed": 5 },
+      "ability": { "name": "Bramble Shroud", "description": "Gain a 4-Poise shield.", "cooldown": 2 },
+      "flavor": "She insists the thorns are decorative.",
+      "visual": "A tall, watchful maid with dark green hair in a long braid woven with thorny vines, intricate vine tattoos along her bare forearms. Deep forest-green dress with brown leather harness, thorn-wrapped apron. Holds a pair of long, barbed pruning shears. Cool, unreadable expression. Background: shadowed greenhouse with carnivorous plants, dim emerald light filtering through leaves."
+    },
+    {
+      "id": "luna",
+      "name": "Luna, the Moonlit Maid",
+      "rarity": "epic", "rarity_color": "#A855F7",
+      "element": "moon", "element_color": "#6366F1",
+      "role": "Support",
+      "stats": { "clean_power": 4, "poise": 7, "charm": 9, "speed": 6 },
+      "ability": { "name": "Silver Polish", "description": "Heal an ally for 6.", "cooldown": 3 },
+      "flavor": "The dust does not vanish. It simply respects her boundaries.",
+      "visual": "An elegant, ethereal maid with long flowing silver hair and pale glowing pale-blue eyes. Deep-indigo dress with moonlight-silver trim and an apron embroidered with delicate constellations. A small crescent-moon hair ornament rests above her ear. Holds a folded polishing cloth that ripples like liquid moonlight. Slightly floating pose, hem of her dress drifting weightlessly. Starry-night background with a full moon haloing her head."
+    },
+    {
+      "id": "mimi",
+      "name": "Mimi, Tea Witch",
+      "rarity": "epic", "rarity_color": "#A855F7",
+      "element": "garden", "element_color": "#16A34A",
+      "role": "Poison Support",
+      "stats": { "clean_power": 4, "poise": 7, "charm": 9, "speed": 6 },
+      "ability": { "name": "Perfect Tea", "description": "Heal an ally for 3 and poison an enemy (2 damage/turn × 3 turns).", "cooldown": 3 },
+      "flavor": "Nobody can prove anything. Nobody.",
+      "visual": "A mischievous brown-haired maid with hair in two messy buns, pointed black witch's hat tilted rakishly over one eye, golden cat-like eyes. Dark-green apron embroidered with little teacups, over a black-and-purple striped dress. Holds a steaming patterned teapot in one hand; the other hand hides a small vial of suspicious bubbling green liquid behind her back. Coy, conspiratorial smile. Background: warm tea-shop with hanging dried flowers and shelves of bottled herbs."
+    },
+    {
+      "id": "indra",
+      "name": "Indra, Mainspring Engineer",
+      "rarity": "epic", "rarity_color": "#A855F7",
+      "element": "clockwork", "element_color": "#B45309",
+      "role": "Combo",
+      "stats": { "clean_power": 6, "poise": 7, "charm": 8, "speed": 7 },
+      "ability": { "name": "Synchronize", "description": "Heal all allies for 2.", "cooldown": 3 },
+      "flavor": "She thinks of the team as one large, polite machine.",
+      "visual": "A tall focused woman with platinum-blonde hair in a high precise bun, sharp grey eyes, a thin pair of magnifying spectacles. Brass-and-leather engineer's vest over a steel-grey dress, tool belt of micro-instruments. Wields an enormous torque wrench like a staff. Large interlocking brass gears float around her in perfectly synchronized rotation. Steampunk-workshop backdrop with intricate machinery and exposed pipework."
+    },
+    {
+      "id": "vexa",
+      "name": "Vexa, Shadow Butler-Maid",
+      "rarity": "legendary", "rarity_color": "#F59E0B",
+      "element": "shadow", "element_color": "#4B5563",
+      "role": "Assassin",
+      "stats": { "clean_power": 9, "poise": 7, "charm": 7, "speed": 9 },
+      "ability": { "name": "Borrowed Silverware", "description": "Deal 5 damage and steal 2 Clean Power from an enemy for 2 turns.", "cooldown": 3 },
+      "flavor": "If you cannot find it, she did not take it. Probably.",
+      "visual": "A tall slender androgynous figure with sleek black hair streaked with deep purple, sharp violet eyes, knowing smirk. Hybrid uniform: butler's long-tailed coat with maid-apron over it, immaculate white gloves, black leather knee-boots. A small array of polished silver utensils (forks, butter knives, sugar tongs) floats around them like throwing-blades poised to strike. Dim candlelit hallway backdrop with long stretched shadows."
+    },
+    {
+      "id": "solene",
+      "name": "Solene, Dawnward",
+      "rarity": "legendary", "rarity_color": "#F59E0B",
+      "element": "light", "element_color": "#FEF3C7",
+      "role": "Guardian",
+      "stats": { "clean_power": 7, "poise": 11, "charm": 8, "speed": 6 },
+      "ability": { "name": "Morning Aegis", "description": "Grant all allies a 4-Poise shield.", "cooldown": 3 },
+      "flavor": "Has not been late in seventeen consecutive sunrises.",
+      "visual": "A tall regal woman with elaborately braided golden hair, kind sky-blue eyes, calm determined expression. Cream-and-gold half-armor (pauldrons, gauntlets, breastplate) layered OVER a white maid uniform — a paladin-maid hybrid. Holds a glowing tower shield etched with sunrise rays in one hand and a feather duster in the other. Light radiates around her. Dawn-bathed background of a manor courtyard, soft pink-gold sunrise behind her."
+    },
+    {
+      "id": "aurelia",
+      "name": "Aurelia, Head Maid of the Golden Hall",
+      "rarity": "mythic", "rarity_color": "#EF4444",
+      "element": "royal", "element_color": "#CA8A04",
+      "role": "Leader",
+      "stats": { "clean_power": 8, "poise": 12, "charm": 10, "speed": 8 },
+      "ability": { "name": "Order Restored", "description": "Heal all allies for 5 and cleanse the whole team of debuffs.", "cooldown": 3 },
+      "flavor": "The chaos is not banished. It has merely been corrected.",
+      "visual": "A stunning auburn-haired woman with hair in an elaborate updo, intense amber eyes, serene commanding presence. Flowing gold-and-white gown layered over a regal maid uniform — ornate gold trim everywhere, lace cuffs, jeweled apron pin. Wears a tiara-like golden headpiece. Carries an ornate golden key like a sceptre, vertical. The air around her shimmers with literal golden glow. Background: vast marble ballroom with chandeliers, columns, polished gold floors reflecting her radiance."
+    }
+  ],
+
+  "tools": [
+    {
+      "id": "spare_broom",
+      "name": "Spare Broom",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "bonuses": { "cp": 1, "poise": 0, "charm": 0, "speed": 0 },
+      "effect_text": "+1 Clean Power. Nothing fancy.",
+      "passive_id": "",
+      "flavor": "The handle has bite marks. Don't ask.",
+      "visual": "A plain wooden broom with worn rough-hewn handle, bristles slightly bent and frayed. Leaning against a chipped stone wall. Tiny faint bite-marks visible on the handle near the top. Neutral warm-grey background with soft dust particles in the air."
+    },
+    {
+      "id": "lavender_sachet",
+      "name": "Lavender Sachet",
+      "rarity": "common", "rarity_color": "#9CA3AF",
+      "bonuses": { "cp": 0, "poise": 0, "charm": 2, "speed": 0 },
+      "effect_text": "+2 Charm.",
+      "passive_id": "",
+      "flavor": "The smell calms even cursed laundry. Briefly.",
+      "visual": "A small embroidered linen pouch in soft pale lavender, drawn closed with a violet silk ribbon. Sprigs of dried lavender peek out the top. Resting on a polished wood surface. Faint purple aroma swirls drift up. Warm sunlit cottage backdrop."
+    },
+    {
+      "id": "cursed_mop",
+      "name": "Cursed Mop",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "bonuses": { "cp": 5, "poise": 0, "charm": 0, "speed": 0 },
+      "effect_text": "+5 Clean Power. Wielder loses 1 Poise each turn.",
+      "passive_id": "drain_1_per_turn",
+      "flavor": "It whispers cleaning tips. Mostly threats.",
+      "visual": "An aged wooden mop with frayed grey strands, head soaked through with a sickly-green ooze. A faint dark-green glow emanates from it, with whorls of shadow swirling slowly around the handle. Tiny faintly-glowing runic etchings carved along the handle. Dim, dripping background — a haunted utility closet."
+    },
+    {
+      "id": "silver_polish_rag",
+      "name": "Silver Polish Rag",
+      "rarity": "uncommon", "rarity_color": "#22C55E",
+      "bonuses": { "cp": 2, "poise": 0, "charm": 1, "speed": 0 },
+      "effect_text": "+2 Clean Power, +1 Charm.",
+      "passive_id": "",
+      "flavor": "Glints with the optimism of a thousand fingerprints.",
+      "visual": "A folded silk rag in pale silver, shimmering faintly. Resting beside a small glass bottle of silver polish with a cork stopper. Light catches the silver flecks woven into the cloth, scattering tiny highlights. Polished wooden tabletop background."
+    },
+    {
+      "id": "golden_feather_duster",
+      "name": "Golden Feather Duster",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "bonuses": { "cp": 3, "poise": 0, "charm": 0, "speed": 1 },
+      "effect_text": "+3 Clean Power. +1 Speed if equipped to a Light or Royal maid.",
+      "passive_id": "",
+      "flavor": "Shimmers self-importantly between battles.",
+      "visual": "An ornate ceremonial feather duster — fibers are spun golden filaments rather than real bird feathers, turned ebony handle inlaid with mother-of-pearl arabesques. A soft golden radiance pulses from its tip. Floating slightly above a velvet display cushion. Royal-blue background with subtle gold-dust particles."
+    },
+    {
+      "id": "clockwork_dustpan",
+      "name": "Clockwork Dustpan",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "bonuses": { "cp": 0, "poise": 2, "charm": 0, "speed": 2 },
+      "effect_text": "+2 Poise, +2 Speed.",
+      "passive_id": "",
+      "flavor": "Empties itself at exactly 3:42pm. Always.",
+      "visual": "A polished brass dustpan with an intricate clockwork mechanism mounted on its back — visible gears, exposed mainspring, and a small wind-up key in motion. Tiny puffs of dust spiral up from the floor and INTO the pan as if drawn magnetically. Warm copper-toned background with diffuse workshop lighting."
+    },
+    {
+      "id": "bonded_apron",
+      "name": "Bonded Apron of Service",
+      "rarity": "rare", "rarity_color": "#3B82F6",
+      "bonuses": { "cp": 0, "poise": 4, "charm": 0, "speed": 0 },
+      "effect_text": "+4 Poise.",
+      "passive_id": "",
+      "flavor": "Reinforced with the stubbornness of seven generations.",
+      "visual": "A heavy linen apron in faded cream, hanging on a brass hook against weathered wood. Seven different family crests embroidered down the front in faded but proud thread. Reinforced cross-stitching on the seams, deep pockets bulging with small tools and cleaning rags. Slight sense of dignified history."
+    },
+    {
+      "id": "tea_tray_of_diplomacy",
+      "name": "Tea Tray of Diplomacy",
+      "rarity": "epic", "rarity_color": "#A855F7",
+      "bonuses": { "cp": 0, "poise": 2, "charm": 0, "speed": 0 },
+      "effect_text": "+2 Poise. Prevents the next negative effect targeting this maid.",
+      "passive_id": "block_next_debuff",
+      "flavor": "Loaded with biscuits of unimpeachable etiquette.",
+      "visual": "An ornate silver tea tray carved with vine motifs around the rim. Holds a delicate porcelain teapot, three matching teacups, and a geometric arrangement of perfectly stacked shortbread biscuits. A soft golden peace-aura radiates from it. Floating gently. Pale-purple background with faint gold sparkles."
+    },
+    {
+      "id": "eternal_kettle",
+      "name": "Eternal Kettle",
+      "rarity": "epic", "rarity_color": "#A855F7",
+      "bonuses": { "cp": 0, "poise": 3, "charm": 2, "speed": 0 },
+      "effect_text": "+3 Poise, +2 Charm. Heal 1 Poise at the start of each turn.",
+      "passive_id": "heal_self_1_per_turn",
+      "flavor": "Has never been empty. Has never been clean.",
+      "visual": "A copper-and-brass kettle covered in elaborate engraved runes and floral motifs, slightly tarnished from centuries of use. Steam rises perpetually from the spout in delicate spirals. A small glass viewing window in its side reveals a soft reddish glow within. Sitting on a glowing stone hearth. Warm orange-pink background."
+    },
+    {
+      "id": "heart_of_the_manor",
+      "name": "Heart of the Manor",
+      "rarity": "legendary", "rarity_color": "#F59E0B",
+      "bonuses": { "cp": 2, "poise": 3, "charm": 3, "speed": 2 },
+      "effect_text": "+2 CP, +3 Poise, +3 Charm, +2 Speed.",
+      "passive_id": "",
+      "flavor": "A small amulet. Faintly hums with the bricks' approval.",
+      "visual": "A glowing amber crystal pendant suspended on a delicate silver chain. The pendant pulses softly like a slow heartbeat. Etched within the crystal: tiny Roman numerals, miniature floor plans of the manor, and delicate filigree. Warm gold light from inside the gem illuminates a soft halo around it. Dark background with gold motes drifting outward."
+    }
+  ],
+
+  "chaos": [
+    {
+      "id": "dust_goblin",
+      "name": "Dust Goblin",
+      "tier": 1,
+      "element": "shadow", "element_color": "#4B5563",
+      "poise": 6, "clean_power": 3, "speed": 5,
+      "ability": { "name": "Bite", "description": "Deal 3 damage." },
+      "flavor": "Made of lint and bad attitude.",
+      "visual": "A small mischievous goblin entirely formed from clumped grey dust and lint, with two glowing yellow pinprick eyes. A stolen bottle cap perched on its head like a tiny helmet. Hunched menacing posture, tiny needle-claws bared, mouth pulled into a malicious grin. Background: a dim dusty under-the-furniture space."
+    },
+    {
+      "id": "sock_gremlin",
+      "name": "Sock Gremlin",
+      "tier": 1,
+      "element": "shadow", "element_color": "#4B5563",
+      "poise": 4, "clean_power": 4, "speed": 7,
+      "ability": { "name": "Snatch", "description": "Deal 4 damage and skitter away (high speed)." },
+      "flavor": "Has stolen exactly one of every pair you own.",
+      "visual": "A skinny twitchy gremlin made of mismatched tangled socks (stripes, polka-dots, plain) sewn together messily. Holds a single brightly-colored sock high like a stolen trophy. Long thin tongue lolls out greedily. Half-crouched behind an upturned laundry basket. Background: dim laundry room with scattered orphan socks."
+    },
+    {
+      "id": "drama_spill",
+      "name": "Drama Spill",
+      "tier": 1,
+      "element": "moon", "element_color": "#6366F1",
+      "poise": 5, "clean_power": 2, "speed": 4,
+      "ability": { "name": "Awkward Silence", "description": "All player maids lose 1 Charm for 1 turn." },
+      "flavor": "It just sits there. Judging.",
+      "visual": "A spreading purple liquid stain on an ornate cream-colored rug. Two large judgmental eyes and a downturned disapproving mouth have formed in the surface tension of the liquid. Faint wisps of shadowy emotional vapor leak upward from it. The rug pattern is slightly warped near the stain. Background: an embarrassed dim living room corner."
+    },
+    {
+      "id": "mold_mimic",
+      "name": "Mold Mimic",
+      "tier": 2,
+      "element": "garden", "element_color": "#16A34A",
+      "poise": 10, "clean_power": 4, "speed": 3,
+      "ability": { "name": "Slop", "description": "Deal 4 damage." },
+      "flavor": "Looks like a teapot. Is not a teapot.",
+      "visual": "A creature shaped almost like a porcelain teapot, but coated entirely in fuzzy black-and-green mold, with patches of slime. One side has cracked open into a wide jagged-toothed mouth and a single glowing yellow eye peers from within. Slime drips down its sides into a small puddle. Dim grimy pantry-shelf backdrop."
+    },
+    {
+      "id": "snack_gremlin",
+      "name": "Snack Gremlin",
+      "tier": 2,
+      "element": "fire", "element_color": "#EF4444",
+      "poise": 8, "clean_power": 5, "speed": 6,
+      "ability": { "name": "Crumb Storm", "description": "Deal 5 damage in a shower of crumbs." },
+      "flavor": "Lives in the couch. Mostly.",
+      "visual": "A round potato-shaped gremlin with crumbs and food smears stuck all over its lumpy body, beady greedy eyes squinted, sharp little teeth. Holds a half-eaten chocolate-chip cookie possessively in both hands. Surrounded by a small swirl of flying crumbs and food debris. Background: between dimly-lit couch cushions."
+    },
+    {
+      "id": "infinite_dishes",
+      "name": "Infinite Dishes",
+      "tier": 2,
+      "element": "frost", "element_color": "#60A5FA",
+      "poise": 12, "clean_power": 3, "speed": 2,
+      "ability": { "name": "Clatter", "description": "All player maids lose 1 Speed at end of turn." },
+      "flavor": "There were six. Now there are twenty-six. There were six.",
+      "visual": "An impossibly tall precarious stack of porcelain plates, bowls, soup tureens, and teacups balancing on top of each other, reaching off the top of the frame. Frost crystallizes around their edges. Subtle face-patterns formed in the blue china glaze, all of them staring outward with a tired, dead-eyed gaze. Background: a cold sink overflowing with more dishes."
+    },
+    {
+      "id": "possessed_kettle",
+      "name": "Possessed Kettle",
+      "tier": 2,
+      "element": "fire", "element_color": "#EF4444",
+      "poise": 9, "clean_power": 6, "speed": 5,
+      "ability": { "name": "Boilover", "description": "Deal 6 damage." },
+      "flavor": "Steam is profanity in a clean kitchen.",
+      "visual": "A black cast-iron kettle with two malevolent glowing red eyes embedded in its body. Furious red-tinged steam shoots in violent jets from its spout. A jagged crack runs across its porcelain handle. Floating slightly off the ground, surrounded by leaping flames. Stove backdrop, scorched."
+    },
+    {
+      "id": "unread_emails",
+      "name": "The Unread Emails",
+      "tier": 3,
+      "element": "clockwork", "element_color": "#B45309",
+      "poise": 11, "clean_power": 5, "speed": 4,
+      "ability": { "name": "Backlog", "description": "Deal 5 damage. There are always more." },
+      "flavor": "They have been waiting. They are still waiting.",
+      "visual": "A looming amorphous entity made of hundreds of folded paper envelopes, each stamped URGENT in red. Many small glowing yellow eyes peer out from between the layers. Brass clockwork pieces and small mechanical arms keep more envelopes flowing endlessly out from inside the mass. Faint ticking aura. Dim office backdrop with overflowing inbox trays."
+    },
+    {
+      "id": "laundry_hydra",
+      "name": "Laundry Hydra",
+      "tier": 3,
+      "element": "shadow", "element_color": "#4B5563",
+      "poise": 18, "clean_power": 5, "speed": 4,
+      "ability": { "name": "Tangle", "description": "When damaged but not defeated, summons a Sock Gremlin." },
+      "flavor": "Cut off one sleeve. Two grow back. Three of them are damp.",
+      "visual": "A massive multi-headed monster — three writhing 'heads' formed from tangled wet shirt-sleeves and pillowcases, twisting and dripping. Its body is a swelling mass of damp clothes and bedsheets. Six smaller sock-puppet heads on its limbs all snarl with cloth-button eyes. Water drips menacingly. Dark shadowy laundry-room backdrop."
+    },
+    {
+      "id": "mold_king",
+      "name": "Mold King Maximus",
+      "tier": 3,
+      "element": "garden", "element_color": "#16A34A",
+      "poise": 22, "clean_power": 7, "speed": 3,
+      "ability": { "name": "Royal Mildew", "description": "Deal 7 damage with smug entitlement." },
+      "flavor": "He sees himself as a connoisseur. Of damp.",
+      "visual": "An imperious vaguely-humanoid figure covered head-to-toe in fungal growths and slimy mold, wearing a tattered regal cloak made of more mold and decaying velvet. A crown of glowing mushrooms sits askew on his head. Carries an ornate moldy scepter topped with a glowing spore-orb. Confident, arrogant posture, head tilted back. Background: throne room of rotting wood and dripping water."
+    }
+  ],
+
+  "raid_bosses": [
+    {
+      "id": "great_unwashed_one",
+      "name": "The Great Unwashed One",
+      "tier": 1,
+      "element": "shadow", "element_color": "#4B5563",
+      "hp": 1500,
+      "flavor": "A mountain of laundry possessed by ancient laziness.",
+      "visual": "A COLOSSAL mountain of tangled, dirty laundry — bedsheets, towels, socks, undergarments — piled like a small geological feature. Many baleful glowing yellow eyes peek from between the folds. A wide malevolent grin forms in one of the larger creases. The pile slumps menacingly. A tiny lone laundry room is visible at its base for scale. Backdrop: a dark, ominous basement-laundry-room with a single bare bulb."
+    },
+    {
+      "id": "laundry_hydra_prime",
+      "name": "Laundry Hydra Prime",
+      "tier": 2,
+      "element": "shadow", "element_color": "#4B5563",
+      "hp": 4000,
+      "flavor": "Three sleeves. Six socks. None of them match.",
+      "visual": "An APEX version of the Laundry Hydra — much larger and more menacing, with six massive towering 'heads' of wet sleeves writhing in different directions, each open at the cuff like a hungry maw. Six secondary sock-puppet limbs lash about. Dripping with foul soapy water. Body of soaked sheets piled like a hulking torso. Background: a vast flooded laundry-temple with overflowing washing machines."
+    },
+    {
+      "id": "mold_king_maximus_raid",
+      "name": "Mold King Maximus",
+      "tier": 3,
+      "element": "garden", "element_color": "#16A34A",
+      "hp": 8000,
+      "flavor": "He sees himself as a connoisseur. Of damp.",
+      "visual": "The RAID-BOSS version of Mold King Maximus — significantly larger and more imposing than his standard form. Sitting on a colossal throne of fungal growths and rotting wood. A massive mushroom crown radiates a haze of glowing spores. His cape is a flowing curtain of green-black slime dripping down the throne steps. Carries his ornate moldy scepter raised. Cathedral-sized chamber filled with rotting splendor, glowing spores drifting like motes, broken stained-glass windows depicting his moldy victories. Light filters through in green-gold beams."
+    }
+  ],
+
+  "design_notes": {
+    "card_layout": "Vertical card. Top: name banner in rarity color. Top-right corner: element badge. Center: character/object art. Middle-low: stat block (4 stats for maids, 4-stat bonus block for tools, 3 stats for chaos). Bottom: ability name + 1-line description. Very bottom: italic flavor text.",
+    "tool_cards": "No element badge. Bonus block replaces the stat block.",
+    "chaos_cards": "Show only Poise, Clean Power, Speed (no Charm). Background tinted by element.",
+    "raid_banners": "Wider horizontal aspect than cards. Show HP bar prominently. Are EVENT banners, not collectible cards.",
+    "level_indicator": "Cards in-game gain levels 1-50. The card art does NOT change with level — the level number appears as a small badge in the lower-right corner during in-game display."
+  }
+}
