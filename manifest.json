@@ -1,7 +1,7 @@
 {
   "id": "maid_and_mayhem",
   "name": "Maid & Mayhem",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "Collect magical maids, clean up chaos, rule the manor. A collectible Discord card game.",
   "capabilities_requested": [
     "interaction:respond",

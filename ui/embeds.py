@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from data import art_config
 from data import chaos as chaos_data
 from data import cosmetics as cosmetics_data
 from data import elements as elements_data
@@ -97,12 +98,16 @@ def maid_card_embed(maid_id: str, *, owned_count: int | None = None, level: int 
         if level is not None:
             owned_str += f"  · Lv {level}"
         fields.append({"name": "Owned", "value": owned_str, "inline": True})
-    return {
+    embed: dict[str, Any] = {
         "title": title,
         "description": desc + (f"\n\n_{m.flavor}_" if m.flavor else ""),
         "color": (r.color if r else 0x6B7280),
         "fields": fields,
     }
+    art_url = art_config.image_url_for("maid", m.id)
+    if art_url:
+        embed["image"] = {"url": art_url}
+    return embed
 
 
 def chaos_card_embed(chaos_id: str) -> dict[str, Any]:
@@ -121,12 +126,16 @@ def chaos_card_embed(chaos_id: str) -> dict[str, Any]:
         {"name": "Speed",        "value": f"⚡ {c.speed}",        "inline": True},
         {"name": c.ability_name, "value": c.ability_text,                 "inline": False},
     ]
-    return {
+    embed: dict[str, Any] = {
         "title": title,
         "description": desc + (f"\n\n_{c.flavor}_" if c.flavor else ""),
         "color": (e.color if e else 0x6B7280),
         "fields": fields,
     }
+    art_url = art_config.image_url_for("chaos", c.id)
+    if art_url:
+        embed["image"] = {"url": art_url}
+    return embed
 
 
 def raid_boss_card_embed(boss_id: str) -> dict[str, Any]:
@@ -139,11 +148,15 @@ def raid_boss_card_embed(boss_id: str) -> dict[str, Any]:
     if e:
         bits.append(f"{e.emoji} {e.label}")
     desc = " · ".join(bits)
-    return {
+    embed: dict[str, Any] = {
         "title": title,
         "description": desc + f"\n\n**HP:** {b.hp:,}" + (f"\n\n_{b.flavor}_" if b.flavor else ""),
         "color": 0xDC2626,
     }
+    art_url = art_config.image_url_for("raid_boss", b.id)
+    if art_url:
+        embed["image"] = {"url": art_url}
+    return embed
 
 
 def tool_card_embed(tool_id: str, *, owned_count: int | None = None) -> dict[str, Any]:
@@ -156,12 +169,16 @@ def tool_card_embed(tool_id: str, *, owned_count: int | None = None) -> dict[str
     fields = [{"name": "Effect", "value": t.description, "inline": False}]
     if owned_count is not None:
         fields.append({"name": "Owned", "value": f"x{owned_count}", "inline": True})
-    return {
+    embed: dict[str, Any] = {
         "title": title,
         "description": subtitle + (f"\n\n_{t.flavor}_" if t.flavor else ""),
         "color": (r.color if r else 0x6B7280),
         "fields": fields,
     }
+    art_url = art_config.image_url_for("tool", t.id)
+    if art_url:
+        embed["image"] = {"url": art_url}
+    return embed
 
 
 # ── Daily pack reveal ───────────────────────────────────────────────────────
@@ -188,28 +205,64 @@ def _pack_lines(drops: list[tuple[str, str]]) -> list[str]:
     return lines
 
 
-def daily_pack_embed(drops: list[tuple[str, str]]) -> dict[str, Any]:
-    """drops: list of (card_type, card_id) pairs."""
-    lines = _pack_lines(drops)
-    return {
-        "title": "\U0001F381 Daily Dust Pack",
-        "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
-        "color": 0xCA8A04,
-        "footer": {"text": "Come back tomorrow for another pack."},
-    }
-
-
 def pack_reveal_embed(pack_id: str, drops: list[tuple[str, str]], *, coins_left: int) -> dict[str, Any]:
-    """Result of a shop purchase. Includes remaining coin balance."""
+    """Result of a shop purchase. Includes remaining coin balance. Embed
+    image is the rarest pulled card's art — pack openings are hero moments.
+    """
     pack = packs_data.BY_ID.get(pack_id)
     title = f"{pack.emoji} {pack.name}" if pack else "Pack"
     lines = _pack_lines(drops)
-    return {
+    embed: dict[str, Any] = {
         "title": title,
         "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
         "color": 0xCA8A04,
         "footer": {"text": f"Remaining: \U0001FA99 {coins_left} coins."},
     }
+    hero_url = _rarest_pull_image(drops)
+    if hero_url:
+        embed["image"] = {"url": hero_url}
+    return embed
+
+
+def daily_pack_embed(drops: list[tuple[str, str]]) -> dict[str, Any]:
+    """Daily pack reveal. (Override of the earlier version — adds hero art.)"""
+    lines = _pack_lines(drops)
+    embed: dict[str, Any] = {
+        "title": "\U0001F381 Daily Dust Pack",
+        "description": "\n".join(lines) if lines else "_(empty pack — this is a bug)_",
+        "color": 0xCA8A04,
+        "footer": {"text": "Come back tomorrow for another pack."},
+    }
+    hero_url = _rarest_pull_image(drops)
+    if hero_url:
+        embed["image"] = {"url": hero_url}
+    return embed
+
+
+_RARITY_ORDER = ("common", "uncommon", "rare", "epic", "legendary", "mythic")
+
+
+def _rarest_pull_image(drops: list[tuple[str, str]]) -> str | None:
+    """Return the art URL of the rarest card in ``drops``, or None.
+    Used to feature the best pull as the pack-reveal embed image."""
+    best_rank, best_kind, best_id = -1, "", ""
+    for card_type, card_id in drops:
+        if card_type == "maid":
+            m = maids_data.BY_ID.get(card_id)
+            if not m:
+                continue
+            rarity = m.rarity
+        else:
+            t = tools_data.BY_ID.get(card_id)
+            if not t:
+                continue
+            rarity = t.rarity
+        rank = _RARITY_ORDER.index(rarity) if rarity in _RARITY_ORDER else -1
+        if rank > best_rank:
+            best_rank, best_kind, best_id = rank, card_type, card_id
+    if not best_id:
+        return None
+    return art_config.image_url_for(best_kind, best_id)
 
 
 def achievements_embed(state: dict[str, Any]) -> dict[str, Any]:
