@@ -1,7 +1,7 @@
 {
   "id": "maid_and_mayhem",
   "name": "Maid & Mayhem",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Collect magical maids, clean up chaos, rule the manor. A collectible Discord card game.",
   "capabilities_requested": [
     "interaction:respond",
@@ -32,6 +32,14 @@
           "description": "Challenge another player to a PvP duel.",
           "options": [
             { "type": 6, "name": "opponent", "description": "Who do you challenge?", "required": true }
+          ]
+        },
+        {
+          "type": 1,
+          "name": "trade",
+          "description": "Trade cards with another player.",
+          "options": [
+            { "type": 6, "name": "opponent", "description": "Who do you want to trade with?", "required": true }
           ]
         },
         { "type": 1, "name": "pack",        "description": "Browse and buy card packs with coins." },

@@ -577,6 +577,80 @@ def manor_upgrade_result_embed(
     }
 
 
+def trade_challenge_embed(
+    a_id: str, a_name: str, b_id: str, b_name: str, *, expires_in_s: int,
+) -> dict[str, Any]:
+    return {
+        "title": "🔁 Trade Invitation",
+        "description": (
+            f"**{a_name}** wants to trade with **{b_name}**.\n\n"
+            f"<@{b_id}> — click **Accept** to open the trade panel, or **Decline** to refuse.\n"
+            f"_Expires in {expires_in_s}s._"
+        ),
+        "color": 0x6366F1,
+    }
+
+
+def trade_panel_embed(state: dict[str, Any]) -> dict[str, Any]:
+    def _side_block(side: dict) -> str:
+        offer = side.get("offer") or []
+        if not offer:
+            lines = ["_(empty)_"]
+        else:
+            lines = []
+            for entry in offer:
+                if not entry or len(entry) < 2:
+                    continue
+                card_type, cid = entry[0], entry[1]
+                if card_type == "maid":
+                    m = maids_data.BY_ID.get(cid)
+                    if not m:
+                        lines.append(f"• `{cid}`")
+                        continue
+                    r = rarities_data.BY_ID.get(m.rarity)
+                    tag = r.emoji if r else "·"
+                    lines.append(f"{tag} **{m.name}** _(maid)_")
+                else:
+                    t = tools_data.BY_ID.get(cid)
+                    if not t:
+                        lines.append(f"• `{cid}`")
+                        continue
+                    r = rarities_data.BY_ID.get(t.rarity)
+                    tag = r.emoji if r else "·"
+                    lines.append(f"{tag} **{t.name}** _(tool)_")
+        status = "🔒 locked" if side.get("locked") else "✏️ editing"
+        return f"{status}\n" + "\n".join(lines)
+
+    a = state["a"]; b = state["b"]
+    return {
+        "title": "🔁 Trade Panel",
+        "color": 0x6366F1,
+        "description": (
+            "Add cards to your side, then **Lock**. When both sides are locked, "
+            "either party can **Confirm** to finalize the swap. Either party can "
+            "**Cancel** at any time."
+        ),
+        "fields": [
+            {"name": f"{a['user_name']}'s offer", "value": _side_block(a), "inline": True},
+            {"name": f"{b['user_name']}'s offer", "value": _side_block(b), "inline": True},
+        ],
+        "footer": {"text": "Only the two parties can interact with this trade."},
+    }
+
+
+def trade_result_embed(state: dict[str, Any], *, ok: bool, message: str = "") -> dict[str, Any]:
+    a = state["a"]; b = state["b"]
+    if ok:
+        title = f"✅ Trade complete — {a['user_name']} ⇄ {b['user_name']}"
+        color = 0x22C55E
+        body = "Inventories have been updated. Run `/maid cards` to see your new collection."
+    else:
+        title = "❌ Trade failed"
+        color = 0xDC2626
+        body = message or "The trade could not be completed."
+    return {"title": title, "description": body, "color": color}
+
+
 def duel_challenge_embed(
     challenger_id: str, challenger_name: str,
     target_id: str, target_name: str,

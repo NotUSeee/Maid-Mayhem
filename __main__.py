@@ -14,7 +14,7 @@ from mmo_maid_sdk import Plugin, Context
 
 from handlers import (
     achievements, daily, card_detail, cards, deck, battle, cosmetics, duel,
-    fuse, manor, pack, profile, quests, raid, rank, leaderboard,
+    fuse, manor, pack, profile, quests, raid, rank, trade, leaderboard,
 )
 from engine import ranks as ranks_engine
 from store import sql as store_sql
@@ -30,6 +30,7 @@ SUBCOMMANDS = {
     "deck":        deck.run,
     "battle":      battle.run,
     "duel":        duel.run,
+    "trade":       trade.run,
     "pack":        pack.run,
     "fuse":        fuse.run,
     "manor":       manor.run,
@@ -153,6 +154,8 @@ def route_components(ctx: Context, event: dict):
         fuse.on_component(ctx, event, parts[2:])
     elif area == "duel":
         duel.on_component(ctx, event, parts[2:])
+    elif area == "trade":
+        trade.on_component(ctx, event, parts[2:])
     elif area == "manor":
         manor.on_component(ctx, event, parts[2:])
     elif area == "raid":
