@@ -1,16 +1,21 @@
 """Card art URL resolution.
 
 Convention: every card with art lives at
-``art/<kind>/<card_id>.png`` in the repo root, where ``<kind>`` is
+``art/<kind>/<card_id>.webp`` in the repo root, where ``<kind>`` is
 ``maid`` | ``tool`` | ``chaos`` | ``raid_boss``. The plugin builds the
 public URL from ``BASE_URL`` + the convention path at runtime — no
 need to maintain a list as long as filenames match card IDs.
 
 ``OVERRIDES`` lets you point a specific card at any URL (handy for
-non-PNG files, cross-repo assets, or per-card CDN overrides).
+non-webp files, cross-repo assets, or per-card CDN overrides).
 
 If a card has no art (file missing AND no override), the embed renders
 without an image — exactly the text card view we already had.
+
+WebP was picked over PNG because:
+  - Discord supports it natively in embeds.
+  - File sizes are 5-6x smaller than equivalent PNG at the same
+    visible quality — keeps the repo lean and embeds snappy on mobile.
 """
 from __future__ import annotations
 
@@ -19,9 +24,12 @@ from __future__ import annotations
 # CDN URL later if you want faster loads.
 BASE_URL = "https://raw.githubusercontent.com/NotUSeee/Maid-Mayhem/main/art"
 
+# Default extension for convention-derived URLs.
+DEFAULT_EXT = "webp"
+
 
 # Per-card URL overrides. Keyed by ``f"{kind}/{card_id}"``. Map to any
-# fully-qualified URL. Useful for non-PNG assets, animated WEBPs for
+# fully-qualified URL. Useful for off-repo CDNs, animated GIFs for
 # Mythic cards, or temporary placeholders.
 #
 # Example::
@@ -52,4 +60,4 @@ def image_url_for(kind: str, card_id: str) -> str | None:
         return None
     if not BASE_URL:
         return None
-    return f"{BASE_URL.rstrip('/')}/{kind}/{card_id}.png"
+    return f"{BASE_URL.rstrip('/')}/{kind}/{card_id}.{DEFAULT_EXT}"

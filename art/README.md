@@ -7,29 +7,29 @@ Drop card images in this directory and they'll appear in Discord embeds.
 ```
 art/
   maid/
-    aurelia.png
-    bria.png
-    luna.png
+    aurelia.webp
+    bria.webp
+    luna.webp
     ...
   tool/
-    cursed_mop.png
-    golden_feather_duster.png
+    cursed_mop.webp
+    golden_feather_duster.webp
     ...
   chaos/
-    dust_goblin.png
-    laundry_hydra.png
+    dust_goblin.webp
+    laundry_hydra.webp
     ...
   raid_boss/
-    great_unwashed_one.png
-    laundry_hydra_prime.png
-    mold_king_maximus_raid.png
+    great_unwashed_one.webp
+    laundry_hydra_prime.webp
+    mold_king_maximus_raid.webp
 ```
 
-**One file per card. Filename = card `id` from `CARDS.json` + `.png`.** Use `.png` for static art (recommended). For animated art use a per-card override (see below).
+**One file per card. Filename = card `id` from `CARDS.json` + `.webp`.** WebP is the default because it's 5-6× smaller than equivalent PNG at the same visible quality and Discord embeds support it natively. For animated art use a per-card override (see below).
 
 ## How URLs are built
 
-The plugin reads `data/art_config.py:BASE_URL` and appends `/<kind>/<id>.png` at runtime. Default base URL is `https://raw.githubusercontent.com/NotUSeee/Maid-Mayhem/main/art` — i.e. this directory served via GitHub raw. Whatever you commit here becomes visible to Discord within seconds.
+The plugin reads `data/art_config.py:BASE_URL` and appends `/<kind>/<id>.webp` at runtime. Default base URL is `https://raw.githubusercontent.com/NotUSeee/Maid-Mayhem/main/art` — i.e. this directory served via GitHub raw. Whatever you commit here becomes visible to Discord within seconds.
 
 If a card has no image file (or you haven't generated it yet), the embed just renders without an image — the existing text card view is unchanged. So you can roll out art card-by-card without breaking anything.
 
@@ -40,7 +40,7 @@ For non-PNG assets, off-repo CDNs, or animated GIFs/WEBPs, add an entry to `OVER
 ```python
 OVERRIDES = {
     "maid/aurelia": "https://my-cdn.example.com/aurelia-animated.gif",
-    "tool/heart_of_the_manor": "https://imgur.com/xyz.png",
+    "tool/heart_of_the_manor": "https://imgur.com/xyz.webp",
 }
 ```
 
@@ -60,8 +60,8 @@ Discord caches embed images. Aim for **≤500 KB per PNG**. Recommended source r
 
 ## To add a brand-new card art
 
-1. Drop `art/maid/<id>.png` (or whichever kind).
-2. `git add art/<kind>/<id>.png && git commit -m "art: <Card Name>" && git push`.
+1. Drop `art/maid/<id>.webp` (or whichever kind).
+2. `git add art/<kind>/<id>.webp && git commit -m "art: <Card Name>" && git push`.
 3. Within a minute or two GitHub raw serves the new URL.
 4. Run `/maid card name:<Card Name>` in Discord — image should appear.
 
