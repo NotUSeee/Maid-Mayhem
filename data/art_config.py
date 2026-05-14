@@ -19,10 +19,12 @@ WebP was picked over PNG because:
 """
 from __future__ import annotations
 
-# Public base URL where the art directory is served. Defaults to the
-# raw view of the main branch in NotUSeee/Maid-Mayhem. Bump this to a
-# CDN URL later if you want faster loads.
-BASE_URL = "https://raw.githubusercontent.com/NotUSeee/Maid-Mayhem/main/art"
+# Public base URL where the art directory is served. The art lives on
+# a separate ``card-art`` branch in this repo so the plugin's ``main``
+# branch stays under the platform's 10 MB GitHub-fetch limit. GitHub
+# raw serves any branch, so swap the branch name here if the assets
+# ever move (e.g. to a dedicated CDN).
+BASE_URL = "https://raw.githubusercontent.com/NotUSeee/Maid-Mayhem/card-art/art"
 
 # Default extension for convention-derived URLs.
 DEFAULT_EXT = "webp"

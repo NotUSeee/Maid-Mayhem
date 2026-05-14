@@ -2,6 +2,18 @@
 
 Drop card images in this directory and they'll appear in Discord embeds.
 
+> **Important — branch convention:** the actual `.webp` files live on the
+> [`card-art` branch](https://github.com/NotUSeee/Maid-Mayhem/tree/card-art),
+> NOT on `main`. The platform's GitHub-fetch step has a 10 MB archive
+> limit; binary assets blow past that quickly. `main` keeps the source
+> tree small (under 1.5 MB) and `card-art` holds the binaries. GitHub
+> raw serves any branch, so the URL pattern in `data/art_config.py`
+> just references the `card-art` branch directly.
+>
+> **To add a new image:** `git checkout card-art`, drop the file in the
+> right `art/<kind>/` subdirectory, `git add` + `commit` + `push`. The
+> plugin needs no redeploy.
+
 ## Naming convention
 
 ```
